@@ -79,8 +79,8 @@ async def upload_csv(dataset_type: str, file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail=time_err)
         df["time"] = pd.to_datetime(df["time"])
 
-    # Store the dataset (runs in thread pool — set_dataset can trigger
-    # heavy _init_raw_from_demo + _rebuild_plant which would block the event loop)
+    # Store the dataset (runs in thread pool — set_dataset + _rebuild_plant
+    # are CPU-heavy and would block the event loop)
     try:
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, set_dataset, dataset_type, df)

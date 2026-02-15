@@ -60,64 +60,66 @@ def reset_to_demo():
 def set_dataset(dataset_type: str, df: pd.DataFrame):
     """
     Store a user-uploaded dataset and rebuild PlantData.
-    First upload uses demo data for all other datasets.
+    First upload: extracts raw data from the existing PlantData object
+    (no re-loading from disk) so the user only needs to upload what they
+    want to override.
     """
     global _plant, _source, _raw_uploads
 
-    # On first custom upload, initialize raw_uploads from demo data
+    # On first custom upload, extract raw data from the *existing* PlantData
+    # rather than re-loading from disk (which doubles memory and causes OOM).
     if _source == "demo" and _plant is not None:
-        _init_raw_from_demo()
+        _extract_raw_from_plant(_plant)
 
     _raw_uploads[dataset_type] = df
     _source = "custom"
     _rebuild_plant()
 
 
-def _init_raw_from_demo():
-    """Extract raw data from demo PlantData for custom rebuild base."""
+def _extract_raw_from_plant(plant: PlantData):
+    """Extract raw DataFrames from an existing PlantData object (zero I/O)."""
     global _raw_uploads
-    demo = load_demo_plant.__wrapped__() if hasattr(load_demo_plant, '__wrapped__') else load_demo_plant()
-    # Store the raw inputs used by load_demo_plant (before PlantData processing)
-    from services.data_loader import extract_demo_data, clean_scada, METADATA_YML
-    import openoa.utils.met_data_processing as met
-    path = extract_demo_data()
-
-    _raw_uploads["scada"] = clean_scada(path / "la-haute-borne-data-2014-2015.csv")
-
-    meter_curtail_df = pd.read_csv(path / "plant_data.csv")
-    meter_df = meter_curtail_df.copy()
-    meter_df["time"] = pd.to_datetime(meter_df.time_utc).dt.tz_localize(None)
-    meter_df.drop(["time_utc", "availability_kwh", "curtailment_kwh"], axis=1, inplace=True)
-    _raw_uploads["meter"] = meter_df
-
-    curtail_df = meter_curtail_df.copy()
-    curtail_df["time"] = pd.to_datetime(curtail_df.time_utc).dt.tz_localize(None)
-    curtail_df.drop(["time_utc"], axis=1, inplace=True)
-    _raw_uploads["curtail"] = curtail_df
-
-    merra2_df = pd.read_csv(path / "merra2_la_haute_borne.csv")
-    merra2_df["datetime"] = pd.to_datetime(merra2_df["datetime"], utc=True).dt.tz_localize(None)
-    merra2_df["winddirection_deg"] = met.compute_wind_direction(merra2_df["u_50"], merra2_df["v_50"])
-    merra2_df.drop(columns=["Unnamed: 0"], errors="ignore", inplace=True)
-
-    era5_df = pd.read_csv(path / "era5_wind_la_haute_borne.csv")
-    era5_df = era5_df.loc[:, ~era5_df.columns.duplicated()].copy()
-    era5_df["datetime"] = pd.to_datetime(era5_df["datetime"], utc=True).dt.tz_localize(None)
-    era5_df = era5_df.set_index(pd.DatetimeIndex(era5_df.datetime)).asfreq("1h")
-    era5_df["datetime"] = era5_df.index
-    era5_df["winddirection_deg"] = met.compute_wind_direction(era5_df["u_100"], era5_df["v_100"]).values
-    era5_df.drop(columns=["Unnamed: 0"], errors="ignore", inplace=True)
-    _raw_uploads["reanalysis"] = {"era5": era5_df, "merra2": merra2_df}
-
-    asset_df = pd.read_csv(path / "la-haute-borne_asset_table.csv")
-    asset_df["type"] = "turbine"
-    _raw_uploads["asset"] = asset_df
+    try:
+        if plant.scada is not None and len(plant.scada) > 0:
+            _raw_uploads["scada"] = plant.scada.reset_index()
+    except Exception:
+        pass
+    try:
+        if plant.meter is not None and len(plant.meter) > 0:
+            _raw_uploads["meter"] = plant.meter.reset_index() if "time" in plant.meter.index.names else plant.meter.copy()
+    except Exception:
+        pass
+    try:
+        if plant.curtail is not None and len(plant.curtail) > 0:
+            _raw_uploads["curtail"] = plant.curtail.reset_index() if "time" in plant.curtail.index.names else plant.curtail.copy()
+    except Exception:
+        pass
+    try:
+        if plant.reanalysis is not None and len(plant.reanalysis) > 0:
+            _raw_uploads["reanalysis"] = {
+                k: v.reset_index() if "time" in v.index.names or "datetime" in v.index.names else v.copy()
+                for k, v in plant.reanalysis.items()
+            }
+    except Exception:
+        pass
+    try:
+        if plant.asset is not None and len(plant.asset) > 0:
+            _raw_uploads["asset"] = plant.asset.reset_index() if plant.asset.index.name else plant.asset.copy()
+    except Exception:
+        pass
 
 
 def _rebuild_plant():
     """Rebuild PlantData from raw uploads."""
     global _plant
+    import gc
     from core.config import METADATA_YML
+
+    # Need at least scada + asset to build a valid PlantData
+    if _raw_uploads["scada"] is None or _raw_uploads["asset"] is None:
+        print("⚠️ Cannot rebuild PlantData: need at least scada + asset")
+        return
+
     try:
         reanalysis = _raw_uploads["reanalysis"]
         if isinstance(reanalysis, pd.DataFrame):
@@ -132,8 +134,11 @@ def _rebuild_plant():
             asset=_raw_uploads["asset"],
             reanalysis=reanalysis,
         )
+        gc.collect()
     except Exception as e:
         print(f"⚠️ Failed to rebuild PlantData: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def get_loaded_status() -> dict[str, bool]:
