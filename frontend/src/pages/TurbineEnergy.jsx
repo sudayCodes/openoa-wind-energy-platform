@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 export default function TurbineEnergy() {
-  const [params, setParams] = useState({ num_sim: 20, uncertainty_meter: 0.005 })
+  const [params, setParams] = useState({ num_sim: 20, uncertainty_scada: 0.005 })
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -53,9 +53,9 @@ export default function TurbineEnergy() {
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Meter Uncertainty</label>
-            <input type="number" step="0.001" value={params.uncertainty_meter}
-              onChange={e => setParams({...params, uncertainty_meter: parseFloat(e.target.value) || 0})}
+            <label className="block text-xs text-slate-400 mb-1">SCADA Uncertainty</label>
+            <input type="number" step="0.001" value={params.uncertainty_scada}
+              onChange={e => setParams({...params, uncertainty_scada: parseFloat(e.target.value) || 0})}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
             />
           </div>

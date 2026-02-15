@@ -83,7 +83,7 @@ def turbine_energy_analysis(params: TurbineEnergyRequest):
         result = run_turbine_energy(
             plant=plant,
             num_sim=params.num_sim,
-            uncertainty_meter=params.uncertainty_meter,
+            uncertainty_scada=params.uncertainty_scada,
         )
         return {"status": "success", "data": result}
     except Exception as e:
@@ -122,9 +122,9 @@ def gap_analysis(params: GapAnalysisRequest):
             "gross_energy": params.eya_gross_energy,
             "availability_losses": params.eya_availability_losses,
             "electrical_losses": params.eya_electrical_losses,
-            "turbine_ideal_energy": params.eya_turbine_ideal_energy,
+            "turbine_losses": params.eya_turbine_losses,
+            "blade_degradation_losses": params.eya_blade_degradation_losses,
             "wake_losses": params.eya_wake_losses,
-            "blade_degradation": params.eya_blade_degradation,
         }
         oa = {
             "aep": params.oa_aep,

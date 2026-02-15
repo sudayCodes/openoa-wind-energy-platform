@@ -58,7 +58,7 @@ class ElectricalLossesRequest(BaseModel):
 
 class TurbineEnergyRequest(BaseModel):
     num_sim: int = Field(default=20, ge=5, le=500)
-    uncertainty_meter: float = Field(default=0.005, ge=0.0, le=0.1)
+    uncertainty_scada: float = Field(default=0.005, ge=0.0, le=0.1)
 
 
 class WakeLossesRequest(BaseModel):
@@ -72,9 +72,9 @@ class GapAnalysisRequest(BaseModel):
     eya_gross_energy: float = Field(description="EYA gross energy (GWh/yr)")
     eya_availability_losses: float = Field(default=0.05, ge=0.0, le=1.0)
     eya_electrical_losses: float = Field(default=0.02, ge=0.0, le=1.0)
-    eya_turbine_ideal_energy: float = Field(default=0.1, ge=0.0, le=1.0)
+    eya_turbine_losses: float = Field(default=0.1, ge=0.0, le=1.0)
+    eya_blade_degradation_losses: float = Field(default=0.0, ge=0.0, le=1.0)
     eya_wake_losses: float = Field(default=0.05, ge=0.0, le=1.0)
-    eya_blade_degradation: float = Field(default=0.0, ge=0.0, le=1.0)
     oa_aep: float = Field(description="OA estimated AEP (GWh/yr)")
     oa_availability_losses: float = Field(ge=0.0, le=1.0)
     oa_electrical_losses: float = Field(ge=0.0, le=1.0)

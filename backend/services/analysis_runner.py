@@ -102,14 +102,18 @@ def run_aep(
 
     # Monthly plot
     try:
-        fig, ax = aep.plot_monthly_reanalysis_windspeed()
-        plots["monthly_windspeed"] = _fig_to_base64(fig)
+        result = aep.plot_normalized_monthly_reanalysis_windspeed(return_fig=True)
+        if result is not None:
+            fig, ax = result
+            plots["monthly_windspeed"] = _fig_to_base64(fig)
     except Exception:
         traceback.print_exc()
 
     try:
-        fig, ax = aep.plot_monthly_plant_energy()
-        plots["monthly_energy"] = _fig_to_base64(fig)
+        result = aep.plot_aggregate_plant_data_timeseries(return_fig=True)
+        if result is not None:
+            fig, ax = result
+            plots["monthly_energy"] = _fig_to_base64(fig)
     except Exception:
         traceback.print_exc()
 
@@ -167,8 +171,10 @@ def run_electrical_losses(
         traceback.print_exc()
 
     try:
-        fig, ax = el.plot_monthly_losses()
-        plots["monthly_losses"] = _fig_to_base64(fig)
+        result = el.plot_monthly_losses(return_fig=True)
+        if result is not None:
+            fig, ax = result
+            plots["monthly_losses"] = _fig_to_base64(fig)
     except Exception:
         traceback.print_exc()
 
@@ -188,24 +194,28 @@ def run_electrical_losses(
 def run_turbine_energy(
     plant: PlantData,
     num_sim: int = 20,
-    uncertainty_meter: float = 0.005,
+    uncertainty_scada: float = 0.005,
 ) -> dict[str, Any]:
     """Run turbine long-term gross energy analysis."""
     tie = TurbineLongTermGrossEnergy(
         plant=plant,
         UQ=True,
         num_sim=num_sim,
-        uncertainty_meter=uncertainty_meter,
+        uncertainty_scada=uncertainty_scada,
     )
     tie.run()
 
-    gross_values = _series_to_list(tie.plant_gross)
+    # plant_gross is a 2D numpy array (num_sim, 1) — flatten to 1D
+    plant_gross = tie.plant_gross
+    if isinstance(plant_gross, np.ndarray) and plant_gross.ndim > 1:
+        plant_gross = plant_gross.flatten()
+    gross_values = _series_to_list(plant_gross)
 
     # Per-turbine results
     turbine_results = {}
-    if tie.turbine_gross_energy_lt is not None:
-        for col in tie.turbine_gross_energy_lt.columns:
-            vals = _series_to_list(tie.turbine_gross_energy_lt[col])
+    if tie.turb_lt_gross is not None and not tie.turb_lt_gross.empty:
+        for col in tie.turb_lt_gross.columns:
+            vals = _series_to_list(tie.turb_lt_gross[col])
             turbine_results[str(col)] = _safe_float(np.nanmean(vals))
 
     clean_gross = [v for v in gross_values if v is not None]
@@ -260,20 +270,26 @@ def run_wake_losses(
     plots = {}
     # Wake loss by direction
     try:
-        fig, ax = wl.plot_wake_losses_by_wd()
-        plots["wake_by_direction"] = _fig_to_base64(fig)
+        result = wl.plot_wake_losses_by_wind_direction(return_fig=True)
+        if result is not None:
+            fig, ax = result
+            plots["wake_by_direction"] = _fig_to_base64(fig)
     except Exception:
         traceback.print_exc()
 
-    # Per-turbine wake losses
+    # Per-turbine wake losses (turbine_wake_losses_lt_mean is a numpy array indexed by turbine)
     turbine_wake = {}
-    if hasattr(wl, "turbine_wake_losses_lt") and wl.turbine_wake_losses_lt is not None:
-        for tid, val in wl.turbine_wake_losses_lt.items():
-            turbine_wake[str(tid)] = _safe_float(float(val) * 100)
+    try:
+        if hasattr(wl, "turbine_wake_losses_lt_mean") and wl.turbine_wake_losses_lt_mean is not None:
+            tids = wl.turbine_ids if hasattr(wl, "turbine_ids") else []
+            for i, tid in enumerate(tids):
+                turbine_wake[str(tid)] = _safe_float(float(wl.turbine_wake_losses_lt_mean[i]) * 100)
+    except Exception:
+        traceback.print_exc()
 
     return {
-        "plant_wake_loss_por_pct": _safe_float(float(wl.wake_losses_por) * 100) if hasattr(wl, "wake_losses_por") and wl.wake_losses_por is not None else None,
-        "plant_wake_loss_lt_pct": _safe_float(float(wl.wake_losses_lt) * 100) if hasattr(wl, "wake_losses_lt") and wl.wake_losses_lt is not None else None,
+        "plant_wake_loss_por_pct": _safe_float(float(wl.wake_losses_por_mean) * 100) if hasattr(wl, "wake_losses_por_mean") and wl.wake_losses_por_mean is not None else None,
+        "plant_wake_loss_lt_pct": _safe_float(float(wl.wake_losses_lt_mean) * 100) if hasattr(wl, "wake_losses_lt_mean") and wl.wake_losses_lt_mean is not None else None,
         "num_simulations": num_sim,
         "turbine_wake_losses": turbine_wake,
         "plots": plots,
@@ -298,17 +314,21 @@ def run_gap_analysis(
 
     plots = {}
     try:
-        fig, ax = gap.plot_waterfall()
-        plots["waterfall"] = _fig_to_base64(fig)
+        result = gap.plot_waterfall(return_fig=True)
+        if result is not None:
+            fig, ax = result
+            plots["waterfall"] = _fig_to_base64(fig)
     except Exception:
         traceback.print_exc()
 
     gap_results = {}
-    if gap.results is not None:
-        if isinstance(gap.results, pd.DataFrame):
-            gap_results = gap.results.to_dict(orient="records")
+    if hasattr(gap, "compiled_data") and gap.compiled_data is not None:
+        if isinstance(gap.compiled_data, pd.DataFrame):
+            gap_results = gap.compiled_data.to_dict(orient="records")
+        elif isinstance(gap.compiled_data, dict):
+            gap_results = {str(k): _safe_float(v) if isinstance(v, (int, float, np.floating)) else str(v) for k, v in gap.compiled_data.items()}
         else:
-            gap_results = gap.results
+            gap_results = gap.compiled_data
 
     return {
         "gap_analysis": gap_results,
@@ -353,8 +373,10 @@ def run_yaw_misalignment(
 
     plots = {}
     try:
-        fig, ax = yaw.plot_yaw_misalignment()
-        plots["yaw_curves"] = _fig_to_base64(fig)
+        result = yaw.plot_yaw_misalignment_by_turbine(return_fig=True)
+        if result is not None:
+            fig, ax = result
+            plots["yaw_curves"] = _fig_to_base64(fig)
     except Exception:
         traceback.print_exc()
 
