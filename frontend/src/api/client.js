@@ -4,7 +4,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
   baseURL: `${API_BASE}/api`,
-  timeout: 300000, // 5 min for long analyses
+  timeout: 900000, // 15 min for heavy analyses (GBM, daily resolution, etc.)
 });
 
 // ── Plant ──
