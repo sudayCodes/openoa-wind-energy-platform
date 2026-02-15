@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 export default function TurbineEnergy() {
-  const [params, setParams] = useState({ num_sim: 20, uncertainty_scada: 0.005 })
+  const [params, setParams] = useState({ num_sim: 5, uncertainty_scada: 0.005 })
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)

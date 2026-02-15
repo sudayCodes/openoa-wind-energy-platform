@@ -57,7 +57,7 @@ class ElectricalLossesRequest(BaseModel):
 
 
 class TurbineEnergyRequest(BaseModel):
-    num_sim: int = Field(default=20, ge=5, le=500)
+    num_sim: int = Field(default=5, ge=5, le=100)
     uncertainty_scada: float = Field(default=0.005, ge=0.0, le=0.1)
 
 
