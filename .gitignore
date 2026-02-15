@@ -8,3 +8,5 @@ uploads/*
 *.egg-info
 .eggs
 build/
+OpenOA/examples/data/la_haute_borne/
+OpenOA/examples/*.ipynb
