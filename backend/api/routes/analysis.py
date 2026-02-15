@@ -9,7 +9,11 @@ Each route:
 
 from __future__ import annotations
 
+import gc
+import asyncio
 import traceback
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
@@ -32,15 +36,26 @@ from services.analysis_runner import (
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
 
+# Dedicated thread pool for CPU-heavy analysis work so we don't block
+# the uvicorn event loop (critical with a single worker).
+_analysis_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="analysis")
+
+
+async def _run_in_thread(func, *args, **kwargs):
+    """Run a blocking function in the thread pool without blocking the event loop."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(_analysis_executor, partial(func, *args, **kwargs))
+
 
 @router.post("/aep")
-def aep_analysis(params: AEPRequest):
+async def aep_analysis(params: AEPRequest):
     """Run Monte Carlo AEP estimation."""
     plant, error = build_plant("MonteCarloAEP")
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = run_aep(
+        result = await _run_in_thread(
+            run_aep,
             plant=plant,
             num_sim=params.num_sim,
             reg_model=params.reg_model,
@@ -48,6 +63,7 @@ def aep_analysis(params: AEPRequest):
             reg_wind_direction=params.reg_wind_direction,
             time_resolution=params.time_resolution,
         )
+        gc.collect()
         return {"status": "success", "data": result}
     except Exception as e:
         traceback.print_exc()
@@ -55,18 +71,20 @@ def aep_analysis(params: AEPRequest):
 
 
 @router.post("/electrical-losses")
-def electrical_losses_analysis(params: ElectricalLossesRequest):
+async def electrical_losses_analysis(params: ElectricalLossesRequest):
     """Run electrical losses analysis."""
     plant, error = build_plant("ElectricalLosses")
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = run_electrical_losses(
+        result = await _run_in_thread(
+            run_electrical_losses,
             plant=plant,
             num_sim=params.num_sim,
             uncertainty_meter=params.uncertainty_meter,
             uncertainty_scada=params.uncertainty_scada,
         )
+        gc.collect()
         return {"status": "success", "data": result}
     except Exception as e:
         traceback.print_exc()
@@ -74,17 +92,19 @@ def electrical_losses_analysis(params: ElectricalLossesRequest):
 
 
 @router.post("/turbine-energy")
-def turbine_energy_analysis(params: TurbineEnergyRequest):
+async def turbine_energy_analysis(params: TurbineEnergyRequest):
     """Run turbine long-term gross energy analysis."""
     plant, error = build_plant("TurbineLongTermGrossEnergy")
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = run_turbine_energy(
+        result = await _run_in_thread(
+            run_turbine_energy,
             plant=plant,
             num_sim=params.num_sim,
             uncertainty_scada=params.uncertainty_scada,
         )
+        gc.collect()
         return {"status": "success", "data": result}
     except Exception as e:
         traceback.print_exc()
@@ -92,18 +112,20 @@ def turbine_energy_analysis(params: TurbineEnergyRequest):
 
 
 @router.post("/wake-losses")
-def wake_losses_analysis(params: WakeLossesRequest):
+async def wake_losses_analysis(params: WakeLossesRequest):
     """Run wake losses analysis."""
     plant, error = build_plant("WakeLosses")
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = run_wake_losses(
+        result = await _run_in_thread(
+            run_wake_losses,
             plant=plant,
             num_sim=params.num_sim,
             wind_direction_col=params.wind_direction_col,
             wind_direction_data_type=params.wind_direction_data_type,
         )
+        gc.collect()
         return {"status": "success", "data": result}
     except Exception as e:
         traceback.print_exc()
@@ -111,7 +133,7 @@ def wake_losses_analysis(params: WakeLossesRequest):
 
 
 @router.post("/gap-analysis")
-def gap_analysis(params: GapAnalysisRequest):
+async def gap_analysis(params: GapAnalysisRequest):
     """Run EYA gap analysis."""
     plant, error = build_plant("EYAGapAnalysis")
     if plant is None:
@@ -132,7 +154,8 @@ def gap_analysis(params: GapAnalysisRequest):
             "electrical_losses": params.oa_electrical_losses,
             "turbine_ideal_energy": params.oa_turbine_ideal_energy,
         }
-        result = run_gap_analysis(plant=plant, eya_estimates=eya, oa_results=oa)
+        result = await _run_in_thread(run_gap_analysis, plant=plant, eya_estimates=eya, oa_results=oa)
+        gc.collect()
         return {"status": "success", "data": result}
     except Exception as e:
         traceback.print_exc()
@@ -140,16 +163,18 @@ def gap_analysis(params: GapAnalysisRequest):
 
 
 @router.post("/yaw-misalignment")
-def yaw_misalignment_analysis(params: YawMisalignmentRequest):
+async def yaw_misalignment_analysis(params: YawMisalignmentRequest):
     """Run static yaw misalignment analysis."""
     plant, error = build_plant("StaticYawMisalignment")
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = run_yaw_misalignment(
+        result = await _run_in_thread(
+            run_yaw_misalignment,
             plant=plant,
             num_sim=params.num_sim,
         )
+        gc.collect()
         return {"status": "success", "data": result}
     except Exception as e:
         traceback.print_exc()

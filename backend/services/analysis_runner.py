@@ -4,6 +4,7 @@ Analysis runner service — runs OpenOA analyses and captures results + plots.
 
 from __future__ import annotations
 
+import gc
 import io
 import base64
 import traceback
@@ -30,8 +31,11 @@ def _fig_to_base64(fig) -> str:
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=120, bbox_inches="tight", facecolor="white")
     plt.close(fig)
+    plt.close("all")  # Safety: close any leaked figures to free memory
     buf.seek(0)
-    return base64.b64encode(buf.read()).decode("utf-8")
+    encoded = base64.b64encode(buf.read()).decode("utf-8")
+    buf.close()
+    return encoded
 
 
 def _safe_float(val) -> float | None:

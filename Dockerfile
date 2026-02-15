@@ -55,7 +55,7 @@ nodaemon=true
 logfile=/var/log/supervisord.log
 
 [program:backend]
-command=uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-keep-alive 120
+command=uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 300 --limit-max-requests 50
 directory=/app/backend
 environment=PYTHONPATH="/app/backend",OPENOA_ROOT="/app/OpenOA"
 autostart=true
