@@ -79,9 +79,11 @@ async def upload_csv(dataset_type: str, file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail=time_err)
         df["time"] = pd.to_datetime(df["time"])
 
-    # Store the dataset
+    # Store the dataset (runs in thread pool — set_dataset can trigger
+    # heavy _init_raw_from_demo + _rebuild_plant which would block the event loop)
     try:
-        set_dataset(dataset_type, df)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, set_dataset, dataset_type, df)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to store dataset: {str(e)}")
@@ -123,10 +125,11 @@ def data_status():
 
 
 @router.post("/reset")
-def reset_data():
+async def reset_data():
     """Reset all data back to the demo dataset."""
     try:
-        reset_to_demo()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, reset_to_demo)
         return {"status": "success", "message": "Data reset to demo dataset."}
     except Exception as e:
         traceback.print_exc()

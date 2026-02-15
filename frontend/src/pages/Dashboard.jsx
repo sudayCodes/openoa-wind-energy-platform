@@ -31,6 +31,7 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="animate-fade-in-up delay-75">
         <StatCard
           icon={Zap}
           label="Plant Capacity"
@@ -38,6 +39,8 @@ export default function Dashboard() {
           unit="MW"
           color="blue"
         />
+        </div>
+        <div className="animate-fade-in-up delay-150">
         <StatCard
           icon={Wind}
           label="Avg Wind Speed"
@@ -45,6 +48,8 @@ export default function Dashboard() {
           unit="m/s"
           color="cyan"
         />
+        </div>
+        <div className="animate-fade-in-up delay-200">
         <StatCard
           icon={TrendingUp}
           label="Avg Power"
@@ -52,6 +57,8 @@ export default function Dashboard() {
           unit="kW"
           color="green"
         />
+        </div>
+        <div className="animate-fade-in-up delay-300">
         <StatCard
           icon={Gauge}
           label="Capacity Factor"
@@ -59,11 +66,12 @@ export default function Dashboard() {
           unit="%"
           color="purple"
         />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {/* Turbine Table */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 animate-fade-in-up delay-400">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Wind className="w-5 h-5 text-blue-400" />
             Turbines
@@ -93,7 +101,7 @@ export default function Dashboard() {
         </div>
 
         {/* Plant Info */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 animate-fade-in-up delay-500">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Database className="w-5 h-5 text-blue-400" />
             Data Summary

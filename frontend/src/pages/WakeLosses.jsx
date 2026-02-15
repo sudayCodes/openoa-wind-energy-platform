@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { runWakeLosses } from '../api/client'
 import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
-import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { Wind, Gauge } from 'lucide-react'
@@ -38,7 +38,7 @@ export default function WakeLosses() {
 
       <DataRequirementBanner {...dataStatus} />
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up">
         <h3 className="text-sm font-semibold text-white mb-1">Analysis Settings</h3>
         <p className="text-xs text-slate-500 mb-4">Tune the analysis parameters below. Your uploaded/demo data is used automatically — no need to re-upload.</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -46,14 +46,14 @@ export default function WakeLosses() {
             <label className="block text-xs text-slate-400 mb-1">Simulations</label>
             <input type="number" value={params.num_sim}
               onChange={e => setParams({...params, num_sim: parseInt(e.target.value) || 10})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             />
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">Wind Direction Source</label>
             <select value={params.wind_direction_data_type}
               onChange={e => setParams({...params, wind_direction_data_type: e.target.value})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             >
               <option value="scada">SCADA</option>
               <option value="tower">Met Tower</option>
@@ -72,16 +72,19 @@ export default function WakeLosses() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4">
-            <DownloadButton onClick={() => downloadResultJSON(result, 'wake_losses_results.json')} />
+          <div className="flex justify-end mb-4 animate-fade-in">
+            <DownloadButton
+              onDownloadJSON={() => downloadResultJSON(result, 'wake_losses_results.json')}
+              onDownloadCSV={() => downloadResultCSV(result, 'wake_losses_results.csv')}
+            />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <StatCard icon={Wind} label="Wake Loss (POR)" value={result.plant_wake_loss_por_pct?.toFixed(2)} unit="%" color="blue" />
-            <StatCard icon={Gauge} label="Wake Loss (Long-term)" value={result.plant_wake_loss_lt_pct?.toFixed(2)} unit="%" color="green" />
+            <div className="animate-fade-in-up delay-75"><StatCard icon={Wind} label="Wake Loss (POR)" value={result.plant_wake_loss_por_pct?.toFixed(2)} unit="%" color="blue" /></div>
+            <div className="animate-fade-in-up delay-150"><StatCard icon={Gauge} label="Wake Loss (Long-term)" value={result.plant_wake_loss_lt_pct?.toFixed(2)} unit="%" color="green" /></div>
           </div>
 
           {turbineData.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up delay-200">
               <h3 className="text-sm font-semibold text-white mb-4">Per-Turbine Wake Losses</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={turbineData}>
@@ -102,7 +105,7 @@ export default function WakeLosses() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in delay-300">
             <PlotImage src={result.plots?.wake_by_direction} alt="Wake Losses by Direction" />
           </div>
         </>

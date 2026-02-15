@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { runYawMisalignment } from '../api/client'
 import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
-import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { Compass } from 'lucide-react'
@@ -28,7 +28,7 @@ export default function YawMisalignment() {
 
       <DataRequirementBanner {...dataStatus} />
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up">
         <h3 className="text-sm font-semibold text-white mb-1">Analysis Settings</h3>
         <p className="text-xs text-slate-500 mb-4">Tune the analysis parameters below. Your uploaded/demo data is used automatically — no need to re-upload.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -52,11 +52,14 @@ export default function YawMisalignment() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4">
-            <DownloadButton onClick={() => downloadResultJSON(result, 'yaw_misalignment_results.json')} />
+          <div className="flex justify-end mb-4 animate-fade-in">
+            <DownloadButton
+              onDownloadJSON={() => downloadResultJSON(result, 'yaw_misalignment_results.json')}
+              onDownloadCSV={() => downloadResultCSV(result, 'yaw_misalignment_results.csv')}
+            />
           </div>
           {turbineYaw.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up delay-150">
               <h3 className="text-sm font-semibold text-white mb-4">Per-Turbine Yaw Misalignment</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {turbineYaw.map(([tid, val]) => (

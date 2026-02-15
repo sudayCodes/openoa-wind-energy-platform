@@ -56,3 +56,36 @@ export function downloadResultJSON(data, filename) {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/**
+ * Trigger a CSV file download of scalar metrics from the result object.
+ * Arrays, objects, and base64 images are excluded — only flat key:value pairs.
+ */
+export function downloadResultCSV(data, filename) {
+  if (!data) return
+  const rows = [['Metric', 'Value']]
+  for (const [key, value] of Object.entries(data)) {
+    // Skip plots, arrays, nested objects
+    if (key === 'plots') continue
+    if (Array.isArray(value)) {
+      rows.push([key, `[${value.length} items]`])
+      continue
+    }
+    if (value !== null && typeof value === 'object') {
+      // Flatten one level (e.g., turbine_wake_losses)
+      for (const [subKey, subVal] of Object.entries(value)) {
+        rows.push([`${key}.${subKey}`, subVal ?? ''])
+      }
+      continue
+    }
+    rows.push([key, value ?? ''])
+  }
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}

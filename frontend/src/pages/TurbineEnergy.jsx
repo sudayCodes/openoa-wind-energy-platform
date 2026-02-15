@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { runTurbineEnergy } from '../api/client'
 import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
-import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { TrendingUp, Gauge } from 'lucide-react'
@@ -35,7 +35,7 @@ export default function TurbineEnergy() {
 
       <DataRequirementBanner {...dataStatus} />
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up">
         <h3 className="text-sm font-semibold text-white mb-1">Analysis Settings</h3>
         <p className="text-xs text-slate-500 mb-4">Tune the analysis parameters below. Your uploaded/demo data is used automatically — no need to re-upload.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -43,14 +43,14 @@ export default function TurbineEnergy() {
             <label className="block text-xs text-slate-400 mb-1">Simulations</label>
             <input type="number" value={params.num_sim}
               onChange={e => setParams({...params, num_sim: parseInt(e.target.value) || 5})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             />
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">SCADA Uncertainty</label>
             <input type="number" step="0.001" value={params.uncertainty_scada}
               onChange={e => setParams({...params, uncertainty_scada: parseFloat(e.target.value) || 0})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             />
           </div>
         </div>
@@ -66,16 +66,19 @@ export default function TurbineEnergy() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4">
-            <DownloadButton onClick={() => downloadResultJSON(result, 'turbine_energy_results.json')} />
+          <div className="flex justify-end mb-4 animate-fade-in">
+            <DownloadButton
+              onDownloadJSON={() => downloadResultJSON(result, 'turbine_energy_results.json')}
+              onDownloadCSV={() => downloadResultCSV(result, 'turbine_energy_results.csv')}
+            />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <StatCard icon={TrendingUp} label="Plant Gross Energy" value={result.mean_plant_gross_gwh?.toFixed(2)} unit="GWh" color="green" />
-            <StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_plant_gross_gwh?.toFixed(3)} unit="GWh" color="yellow" />
+            <div className="animate-fade-in-up delay-75"><StatCard icon={TrendingUp} label="Plant Gross Energy" value={result.mean_plant_gross_gwh?.toFixed(2)} unit="GWh" color="green" /></div>
+            <div className="animate-fade-in-up delay-150"><StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_plant_gross_gwh?.toFixed(3)} unit="GWh" color="yellow" /></div>
           </div>
 
           {turbineData.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up delay-200">
               <h3 className="text-sm font-semibold text-white mb-4">Per-Turbine Long-Term Gross Energy</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={turbineData}>
@@ -97,7 +100,7 @@ export default function TurbineEnergy() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in delay-300">
             <PlotImage src={result.plots?.turbine_gross} alt="Turbine Gross Energy" />
           </div>
         </>

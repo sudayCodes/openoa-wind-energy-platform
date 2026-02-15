@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { runGapAnalysis } from '../api/client'
 import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
-import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { GitCompareArrows } from 'lucide-react'
@@ -50,7 +50,7 @@ export default function GapAnalysis() {
 
       <DataRequirementBanner {...dataStatus} />
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up">
         <h3 className="text-sm font-semibold text-white mb-1">Analysis Settings</h3>
         <p className="text-xs text-slate-500 mb-4">Enter the EYA predictions and OA results to compare. Your uploaded/demo data is used automatically for plant context.</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -97,10 +97,13 @@ export default function GapAnalysis() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4">
-            <DownloadButton onClick={() => downloadResultJSON(result, 'gap_analysis_results.json')} />
+          <div className="flex justify-end mb-4 animate-fade-in">
+            <DownloadButton
+              onDownloadJSON={() => downloadResultJSON(result, 'gap_analysis_results.json')}
+              onDownloadCSV={() => downloadResultCSV(result, 'gap_analysis_results.csv')}
+            />
           </div>
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4 animate-fade-in-up delay-150">
           <PlotImage src={result.plots?.waterfall} alt="Gap Analysis Waterfall" />
 
           {result.gap_analysis && Array.isArray(result.gap_analysis) && result.gap_analysis.length > 0 && (

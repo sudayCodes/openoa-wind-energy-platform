@@ -127,12 +127,40 @@ def run_aep(
     del aep
     gc.collect()
 
+    # Compute extra metrics for the executive summary
+    mean_aep = _safe_float(np.nanmean(clean_aep)) if clean_aep else None
+    std_aep = _safe_float(np.nanstd(clean_aep)) if clean_aep else None
+    p50 = _safe_float(np.nanpercentile(clean_aep, 50)) if clean_aep else None
+    p90 = _safe_float(np.nanpercentile(clean_aep, 90)) if clean_aep else None
+    p10 = _safe_float(np.nanpercentile(clean_aep, 10)) if clean_aep else None
+
+    # Capacity factor: AEP_GWh / (rated_MW * 8760h) * 100
+    total_rated_kw = None
+    try:
+        total_rated_kw = float(plant.asset["rated_power"].sum())
+    except Exception:
+        pass
+    capacity_factor = None
+    if mean_aep and total_rated_kw and total_rated_kw > 0:
+        rated_mw = total_rated_kw / 1000.0
+        capacity_factor = _safe_float((mean_aep * 1000) / (rated_mw * 8760) * 100)
+
+    # Uncertainty ratio (σ / mean) %
+    uncertainty_pct = None
+    if mean_aep and std_aep and mean_aep > 0:
+        uncertainty_pct = _safe_float((std_aep / mean_aep) * 100)
+
     return {
-        "mean_aep_gwh": _safe_float(np.nanmean(clean_aep)) if clean_aep else None,
-        "std_aep_gwh": _safe_float(np.nanstd(clean_aep)) if clean_aep else None,
+        "mean_aep_gwh": mean_aep,
+        "std_aep_gwh": std_aep,
         "median_aep_gwh": _safe_float(np.nanmedian(clean_aep)) if clean_aep else None,
         "p5_aep_gwh": _safe_float(np.nanpercentile(clean_aep, 5)) if clean_aep else None,
+        "p10_aep_gwh": p10,
+        "p50_aep_gwh": p50,
+        "p90_aep_gwh": p90,
         "p95_aep_gwh": _safe_float(np.nanpercentile(clean_aep, 95)) if clean_aep else None,
+        "capacity_factor_pct": capacity_factor,
+        "uncertainty_pct": uncertainty_pct,
         "mean_avail_pct": _safe_float(np.nanmean(avail_values)) if avail_values else None,
         "mean_curt_pct": _safe_float(np.nanmean(curt_values)) if curt_values else None,
         "num_simulations": num_sim,

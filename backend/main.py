@@ -32,6 +32,9 @@ app = FastAPI(
     description="A web application wrapping the OpenOA library for wind plant operational assessment.",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
 )
 
 # CORS — allow frontend dev server and production

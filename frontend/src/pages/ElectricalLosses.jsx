@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { runElectricalLosses } from '../api/client'
 import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
-import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { Zap, TrendingDown, Gauge } from 'lucide-react'
@@ -40,7 +40,7 @@ export default function ElectricalLosses() {
 
       <DataRequirementBanner {...dataStatus} />
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up">
         <h3 className="text-sm font-semibold text-white mb-1">Analysis Settings</h3>
         <p className="text-xs text-slate-500 mb-4">Tune the analysis parameters below. Your uploaded/demo data is used automatically — no need to re-upload.</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -48,21 +48,21 @@ export default function ElectricalLosses() {
             <label className="block text-xs text-slate-400 mb-1">Simulations</label>
             <input type="number" value={params.num_sim}
               onChange={e => setParams({...params, num_sim: parseInt(e.target.value) || 100})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             />
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">Meter Uncertainty</label>
             <input type="number" step="0.001" value={params.uncertainty_meter}
               onChange={e => setParams({...params, uncertainty_meter: parseFloat(e.target.value) || 0})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             />
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">SCADA Uncertainty</label>
             <input type="number" step="0.001" value={params.uncertainty_scada}
               onChange={e => setParams({...params, uncertainty_scada: parseFloat(e.target.value) || 0})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             />
           </div>
         </div>
@@ -78,17 +78,20 @@ export default function ElectricalLosses() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4">
-            <DownloadButton onClick={() => downloadResultJSON(result, 'electrical_losses_results.json')} />
+          <div className="flex justify-end mb-4 animate-fade-in">
+            <DownloadButton
+              onDownloadJSON={() => downloadResultJSON(result, 'electrical_losses_results.json')}
+              onDownloadCSV={() => downloadResultCSV(result, 'electrical_losses_results.csv')}
+            />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <StatCard icon={Zap} label="Mean Electrical Loss" value={result.mean_loss_pct?.toFixed(2)} unit="%" color="purple" />
-            <StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_loss_pct?.toFixed(3)} unit="%" color="yellow" />
-            <StatCard icon={TrendingDown} label="Median Loss" value={result.median_loss_pct?.toFixed(2)} unit="%" color="blue" />
+            <div className="animate-fade-in-up delay-75"><StatCard icon={Zap} label="Mean Electrical Loss" value={result.mean_loss_pct?.toFixed(2)} unit="%" color="purple" /></div>
+            <div className="animate-fade-in-up delay-150"><StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_loss_pct?.toFixed(3)} unit="%" color="yellow" /></div>
+            <div className="animate-fade-in-up delay-200"><StatCard icon={TrendingDown} label="Median Loss" value={result.median_loss_pct?.toFixed(2)} unit="%" color="blue" /></div>
           </div>
 
           {histData.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up delay-300">
               <h3 className="text-sm font-semibold text-white mb-4">Loss Distribution (%)</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={histData}>
@@ -102,7 +105,7 @@ export default function ElectricalLosses() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in delay-400">
             <PlotImage src={result.plots?.loss_distribution} alt="Loss Distribution" />
             <PlotImage src={result.plots?.monthly_losses} alt="Monthly Losses" />
           </div>

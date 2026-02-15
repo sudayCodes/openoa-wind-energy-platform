@@ -1,11 +1,27 @@
 import { useState } from 'react'
 import { runAEP } from '../api/client'
 import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
-import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
-import { BarChart3, TrendingUp, Gauge, AlertTriangle } from 'lucide-react'
+import { BarChart3, TrendingUp, Gauge, AlertTriangle, Activity, Target, Zap, FileText } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+
+function getCapacityFactorRating(cf) {
+  if (cf == null) return { label: 'N/A', color: 'text-slate-400' }
+  if (cf >= 40) return { label: 'Excellent', color: 'text-emerald-400' }
+  if (cf >= 30) return { label: 'Good', color: 'text-blue-400' }
+  if (cf >= 20) return { label: 'Moderate', color: 'text-amber-400' }
+  return { label: 'Low', color: 'text-red-400' }
+}
+
+function getUncertaintyRating(pct) {
+  if (pct == null) return { label: 'N/A', color: 'text-slate-400' }
+  if (pct < 3) return { label: 'very low', color: 'text-emerald-400' }
+  if (pct < 6) return { label: 'acceptable', color: 'text-blue-400' }
+  if (pct < 10) return { label: 'moderate', color: 'text-amber-400' }
+  return { label: 'high', color: 'text-red-400' }
+}
 
 export default function AEPAnalysis() {
   const [params, setParams] = useState({
@@ -39,6 +55,9 @@ export default function AEPAnalysis() {
     }))
   })() : []
 
+  const cfRating = getCapacityFactorRating(result?.capacity_factor_pct)
+  const uncRating = getUncertaintyRating(result?.uncertainty_pct)
+
   return (
     <div>
       <PageHeader
@@ -50,20 +69,20 @@ export default function AEPAnalysis() {
       <DataRequirementBanner {...dataStatus} />
 
       {/* Analysis Settings Panel */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up">
         <h3 className="text-sm font-semibold text-white mb-1">Analysis Settings</h3>
         <p className="text-xs text-slate-500 mb-4">Tune the analysis parameters below. Your uploaded/demo data is used automatically — no need to re-upload.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <FormField label="Monte Carlo Simulations">
             <input type="number" value={params.num_sim}
               onChange={e => setParams({...params, num_sim: parseInt(e.target.value) || 100})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             />
           </FormField>
           <FormField label="Regression Model">
             <select value={params.reg_model}
               onChange={e => setParams({...params, reg_model: e.target.value})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             >
               <option value="lin">Linear (lin)</option>
               <option value="gam">GAM (gam)</option>
@@ -74,7 +93,7 @@ export default function AEPAnalysis() {
           <FormField label="Time Resolution">
             <select value={params.time_resolution}
               onChange={e => setParams({...params, time_resolution: e.target.value})}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none transition-smooth"
             >
               <option value="MS">Monthly (MS)</option>
               <option value="D">Daily (D)</option>
@@ -97,7 +116,7 @@ export default function AEPAnalysis() {
           </label>
         </div>
         <button onClick={handleRun} disabled={loading || waiting || !dataStatus.ready}
-          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors animate-pulse-glow"
         >
           {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run AEP Analysis'}
         </button>
@@ -109,19 +128,94 @@ export default function AEPAnalysis() {
       {/* Results */}
       {result && (
         <>
-          <div className="flex justify-end mb-4">
-            <DownloadButton onClick={() => downloadResultJSON(result, 'aep_results.json')} />
+          <div className="flex justify-end mb-4 gap-2 animate-fade-in">
+            <DownloadButton
+              onDownloadJSON={() => downloadResultJSON(result, 'aep_results.json')}
+              onDownloadCSV={() => downloadResultCSV(result, 'aep_results.csv')}
+            />
+          </div>
+
+          {/* Executive Summary */}
+          <div className="bg-gradient-to-r from-blue-500/10 via-slate-900 to-emerald-500/10 border border-blue-500/20 rounded-xl p-6 mb-6 animate-fade-in-up">
+            <div className="flex items-center gap-2 mb-4">
+              <FileText className="w-5 h-5 text-blue-400" />
+              <h3 className="text-lg font-bold text-white">Executive Summary</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="text-center">
+                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Expected AEP (P50)</p>
+                <p className="text-3xl font-bold text-blue-400">{result.p50_aep_gwh?.toFixed(2) ?? '—'}</p>
+                <p className="text-xs text-slate-500">GWh/yr</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Conservative Estimate (P90)</p>
+                <p className="text-3xl font-bold text-emerald-400">{result.p90_aep_gwh?.toFixed(2) ?? '—'}</p>
+                <p className="text-xs text-slate-500">GWh/yr</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Capacity Factor</p>
+                <p className="text-3xl font-bold">
+                  <span className={cfRating.color}>{result.capacity_factor_pct?.toFixed(1) ?? '—'}</span>
+                </p>
+                <p className={`text-xs ${cfRating.color}`}>{cfRating.label}</p>
+              </div>
+            </div>
+            <div className="bg-slate-800/50 rounded-lg p-4 text-sm text-slate-300 leading-relaxed">
+              <p>
+                The Monte Carlo analysis ({result.num_simulations} simulations) estimates a
+                <strong className="text-white"> mean AEP of {result.mean_aep_gwh?.toFixed(2)} GWh/yr</strong> with
+                a standard deviation of {result.std_aep_gwh?.toFixed(3)} GWh
+                ({result.uncertainty_pct != null ? <span className={uncRating.color}>{result.uncertainty_pct.toFixed(1)}% uncertainty — {uncRating.label}</span> : 'N/A'}).
+                {result.p50_aep_gwh != null && result.p90_aep_gwh != null && (
+                  <> The P50/P90 spread of {(result.p50_aep_gwh - result.p90_aep_gwh).toFixed(3)} GWh indicates the
+                  range between the median expectation and the conservative financing scenario.</>
+                )}
+                {result.capacity_factor_pct != null && (
+                  <> At a <strong className={cfRating.color}>{result.capacity_factor_pct.toFixed(1)}%</strong> capacity factor
+                  ({cfRating.label.toLowerCase()}), this plant
+                  {result.capacity_factor_pct >= 30 ? ' is performing well relative to industry benchmarks.' : ' may benefit from further investigation into operational improvements.'}
+                  </>
+                )}
+                {result.mean_avail_pct != null && (
+                  <> Availability losses account for approximately <strong className="text-amber-400">{(result.mean_avail_pct * 100).toFixed(1)}%</strong> of total energy.</>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="animate-fade-in-up delay-75">
+              <StatCard icon={BarChart3} label="Mean AEP" value={result.mean_aep_gwh?.toFixed(2)} unit="GWh/yr" color="blue" />
+            </div>
+            <div className="animate-fade-in-up delay-150">
+              <StatCard icon={Target} label="P50 (Median)" value={result.p50_aep_gwh?.toFixed(2)} unit="GWh/yr" color="cyan" />
+            </div>
+            <div className="animate-fade-in-up delay-200">
+              <StatCard icon={Activity} label="P90 (Conservative)" value={result.p90_aep_gwh?.toFixed(2)} unit="GWh/yr" color="green" />
+            </div>
+            <div className="animate-fade-in-up delay-300">
+              <StatCard icon={Zap} label="Capacity Factor" value={result.capacity_factor_pct?.toFixed(1)} unit="%" color="purple" subtext={cfRating.label} />
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard icon={BarChart3} label="Mean AEP" value={result.mean_aep_gwh?.toFixed(2)} unit="GWh/yr" color="blue" />
-            <StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_aep_gwh?.toFixed(3)} unit="GWh" color="yellow" />
-            <StatCard icon={TrendingUp} label="P5 / P95" value={`${result.p5_aep_gwh?.toFixed(2)} / ${result.p95_aep_gwh?.toFixed(2)}`} unit="GWh" color="green" />
-            <StatCard icon={AlertTriangle} label="Availability Loss" value={result.mean_avail_pct ? (result.mean_avail_pct * 100).toFixed(1) : null} unit="%" color="red" />
+            <div className="animate-fade-in-up delay-300">
+              <StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_aep_gwh?.toFixed(3)} unit="GWh" color="yellow" />
+            </div>
+            <div className="animate-fade-in-up delay-400">
+              <StatCard icon={TrendingUp} label="P5 / P95" value={`${result.p5_aep_gwh?.toFixed(2)} / ${result.p95_aep_gwh?.toFixed(2)}`} unit="GWh" color="green" />
+            </div>
+            <div className="animate-fade-in-up delay-500">
+              <StatCard icon={AlertTriangle} label="Availability Loss" value={result.mean_avail_pct ? (result.mean_avail_pct * 100).toFixed(1) : null} unit="%" color="red" />
+            </div>
+            <div className="animate-fade-in-up delay-600">
+              <StatCard icon={AlertTriangle} label="Curtailment Loss" value={result.mean_curt_pct ? (result.mean_curt_pct * 100).toFixed(1) : null} unit="%" color="yellow" />
+            </div>
           </div>
 
           {/* Interactive histogram */}
           {histData.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 animate-fade-in-up delay-400">
               <h3 className="text-sm font-semibold text-white mb-4">AEP Distribution (Interactive)</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={histData}>
@@ -140,7 +234,7 @@ export default function AEPAnalysis() {
           )}
 
           {/* OpenOA native plots */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in delay-500">
             <PlotImage src={result.plots?.aep_distribution} alt="AEP Distribution" />
             <PlotImage src={result.plots?.monthly_energy} alt="Monthly Energy" />
             <PlotImage src={result.plots?.monthly_windspeed} alt="Monthly Windspeed" />
