@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 
 export default function AEPAnalysis() {
   const [params, setParams] = useState({
-    num_sim: 2000,
+    num_sim: 1000,
     reg_model: 'lin',
     reg_temperature: false,
     reg_wind_direction: false,

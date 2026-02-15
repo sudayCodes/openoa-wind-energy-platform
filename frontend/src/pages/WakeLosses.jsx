@@ -9,7 +9,7 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 export default function WakeLosses() {
   const [params, setParams] = useState({
-    num_sim: 50,
+    num_sim: 10,
     wind_direction_col: 'WMET_HorWdDir',
     wind_direction_data_type: 'scada',
   })

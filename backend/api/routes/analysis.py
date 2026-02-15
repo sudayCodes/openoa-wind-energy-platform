@@ -38,7 +38,8 @@ router = APIRouter(prefix="/analysis", tags=["Analysis"])
 
 # Dedicated thread pool for CPU-heavy analysis work so we don't block
 # the uvicorn event loop (critical with a single worker).
-_analysis_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="analysis")
+# max_workers=1 prevents concurrent analyses from doubling memory usage.
+_analysis_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="analysis")
 
 
 async def _run_in_thread(func, *args, **kwargs):

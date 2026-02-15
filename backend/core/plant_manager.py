@@ -12,7 +12,6 @@ Architecture:
 from __future__ import annotations
 
 from typing import Any, Optional
-from copy import deepcopy
 
 import pandas as pd
 from openoa.plant import PlantData
@@ -198,7 +197,11 @@ def get_data_info() -> dict[str, Any]:
 def build_plant(analysis_type: str) -> tuple[Optional[PlantData], str]:
     """
     Get PlantData for an analysis, after validating requirements.
-    Returns a deepcopy so each analysis gets a fresh instance.
+
+    NOTE: We return the *original* reference — no deepcopy here.
+    OpenOA analysis classes already deepcopy the plant internally
+    (via attrs ``field(converter=deepcopy)``), so copying here would
+    triple memory usage and cause OOM on memory-constrained hosts.
     """
     if _plant is None:
         return None, "No plant data loaded. Load demo or upload CSVs first."
@@ -208,7 +211,7 @@ def build_plant(analysis_type: str) -> tuple[Optional[PlantData], str]:
     if not valid:
         return None, error
 
-    return deepcopy(_plant), ""
+    return _plant, ""
 
 
 def get_store_source() -> str:

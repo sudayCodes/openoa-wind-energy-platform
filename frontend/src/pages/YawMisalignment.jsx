@@ -5,7 +5,7 @@ import useDataStatus from '../hooks/useDataStatus'
 import { Compass } from 'lucide-react'
 
 export default function YawMisalignment() {
-  const [params, setParams] = useState({ num_sim: 50 })
+  const [params, setParams] = useState({ num_sim: 10 })
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)

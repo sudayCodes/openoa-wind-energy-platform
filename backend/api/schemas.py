@@ -43,7 +43,7 @@ class ScadaPreview(BaseModel):
 # ── Analysis Request Schemas ──
 
 class AEPRequest(BaseModel):
-    num_sim: int = Field(default=2000, ge=100, le=20000)
+    num_sim: int = Field(default=1000, ge=100, le=10000)
     reg_model: str = Field(default="lin", pattern="^(lin|gam|gbm|etr)$")
     reg_temperature: bool = False
     reg_wind_direction: bool = False
@@ -51,7 +51,7 @@ class AEPRequest(BaseModel):
 
 
 class ElectricalLossesRequest(BaseModel):
-    num_sim: int = Field(default=3000, ge=100, le=20000)
+    num_sim: int = Field(default=1000, ge=100, le=10000)
     uncertainty_meter: float = Field(default=0.005, ge=0.0, le=0.1)
     uncertainty_scada: float = Field(default=0.005, ge=0.0, le=0.1)
 
@@ -62,7 +62,7 @@ class TurbineEnergyRequest(BaseModel):
 
 
 class WakeLossesRequest(BaseModel):
-    num_sim: int = Field(default=50, ge=10, le=500)
+    num_sim: int = Field(default=10, ge=5, le=200)
     wind_direction_col: str = "WMET_HorWdDir"
     wind_direction_data_type: str = Field(default="scada", pattern="^(scada|tower)$")
 
@@ -82,4 +82,4 @@ class GapAnalysisRequest(BaseModel):
 
 
 class YawMisalignmentRequest(BaseModel):
-    num_sim: int = Field(default=50, ge=10, le=500)
+    num_sim: int = Field(default=10, ge=5, le=200)

@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 
 export default function ElectricalLosses() {
   const [params, setParams] = useState({
-    num_sim: 3000,
+    num_sim: 1000,
     uncertainty_meter: 0.005,
     uncertainty_scada: 0.005,
   })

@@ -122,6 +122,11 @@ def run_aep(
         traceback.print_exc()
 
     clean_aep = [v for v in aep_values if v is not None]
+
+    # Free the heavy analysis object (contains a deepcopy of PlantData)
+    del aep
+    gc.collect()
+
     return {
         "mean_aep_gwh": _safe_float(np.nanmean(clean_aep)) if clean_aep else None,
         "std_aep_gwh": _safe_float(np.nanstd(clean_aep)) if clean_aep else None,
@@ -182,6 +187,10 @@ def run_electrical_losses(
     except Exception:
         traceback.print_exc()
 
+    # Free the heavy analysis object
+    del el
+    gc.collect()
+
     return {
         "mean_loss_pct": _safe_float(np.nanmean(clean_losses) * 100) if clean_losses else None,
         "std_loss_pct": _safe_float(np.nanstd(clean_losses) * 100) if clean_losses else None,
@@ -223,6 +232,10 @@ def run_turbine_energy(
             turbine_results[str(col)] = _safe_float(np.nanmean(vals))
 
     clean_gross = [v for v in gross_values if v is not None]
+
+    # Free the heavy analysis object
+    del tie
+    gc.collect()
 
     plots = {}
     try:
@@ -291,9 +304,17 @@ def run_wake_losses(
     except Exception:
         traceback.print_exc()
 
+    # Extract scalar results before deleting the analysis object
+    por_pct = _safe_float(float(wl.wake_losses_por_mean) * 100) if hasattr(wl, "wake_losses_por_mean") and wl.wake_losses_por_mean is not None else None
+    lt_pct = _safe_float(float(wl.wake_losses_lt_mean) * 100) if hasattr(wl, "wake_losses_lt_mean") and wl.wake_losses_lt_mean is not None else None
+
+    # Free the heavy analysis object (WakeLosses is the most memory-intensive)
+    del wl
+    gc.collect()
+
     return {
-        "plant_wake_loss_por_pct": _safe_float(float(wl.wake_losses_por_mean) * 100) if hasattr(wl, "wake_losses_por_mean") and wl.wake_losses_por_mean is not None else None,
-        "plant_wake_loss_lt_pct": _safe_float(float(wl.wake_losses_lt_mean) * 100) if hasattr(wl, "wake_losses_lt_mean") and wl.wake_losses_lt_mean is not None else None,
+        "plant_wake_loss_por_pct": por_pct,
+        "plant_wake_loss_lt_pct": lt_pct,
         "num_simulations": num_sim,
         "turbine_wake_losses": turbine_wake,
         "plots": plots,
@@ -333,6 +354,10 @@ def run_gap_analysis(
             gap_results = {str(k): _safe_float(v) if isinstance(v, (int, float, np.floating)) else str(v) for k, v in gap.compiled_data.items()}
         else:
             gap_results = gap.compiled_data
+
+    # Free the analysis object
+    del gap
+    gc.collect()
 
     return {
         "gap_analysis": gap_results,
@@ -383,6 +408,10 @@ def run_yaw_misalignment(
             plots["yaw_curves"] = _fig_to_base64(fig)
     except Exception:
         traceback.print_exc()
+
+    # Free the heavy analysis object
+    del yaw
+    gc.collect()
 
     return {
         "turbine_yaw_misalignment": turbine_yaw,
