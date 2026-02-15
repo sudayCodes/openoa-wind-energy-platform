@@ -1,0 +1,110 @@
+import { useState } from 'react'
+import { runWakeLosses } from '../api/client'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert } from '../components/UI'
+import { Wind, Gauge } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+
+export default function WakeLosses() {
+  const [params, setParams] = useState({
+    num_sim: 50,
+    wind_direction_col: 'WMET_HorWdDir',
+    wind_direction_data_type: 'scada',
+  })
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleRun = () => {
+    setLoading(true)
+    setError(null)
+    runWakeLosses(params)
+      .then(res => setResult(res.data.data))
+      .catch(err => setError(err.response?.data?.detail || err.message))
+      .finally(() => setLoading(false))
+  }
+
+  const turbineData = result?.turbine_wake_losses
+    ? Object.entries(result.turbine_wake_losses).map(([id, val]) => ({
+        name: id.length > 8 ? id.slice(-6) : id,
+        loss: val ?? 0
+      }))
+    : []
+
+  return (
+    <div>
+      <PageHeader
+        icon={Wind}
+        title="Wake Losses"
+        description="Estimate plant-level and turbine-level internal wake losses with long-term correction"
+      />
+
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+        <h3 className="text-sm font-semibold text-white mb-4">Configuration</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Simulations</label>
+            <input type="number" value={params.num_sim}
+              onChange={e => setParams({...params, num_sim: parseInt(e.target.value) || 10})}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Wind Direction Source</label>
+            <select value={params.wind_direction_data_type}
+              onChange={e => setParams({...params, wind_direction_data_type: e.target.value})}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="scada">SCADA</option>
+              <option value="tower">Met Tower</option>
+            </select>
+          </div>
+        </div>
+        <button onClick={handleRun} disabled={loading}
+          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          {loading ? 'Running...' : 'Run Wake Losses Analysis'}
+        </button>
+      </div>
+
+      {loading && <LoadingSpinner text="Running wake losses analysis..." />}
+      <ErrorAlert message={error} />
+
+      {result && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <StatCard icon={Wind} label="Wake Loss (POR)" value={result.plant_wake_loss_por_pct?.toFixed(2)} unit="%" color="blue" />
+            <StatCard icon={Gauge} label="Wake Loss (Long-term)" value={result.plant_wake_loss_lt_pct?.toFixed(2)} unit="%" color="green" />
+          </div>
+
+          {turbineData.length > 0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+              <h3 className="text-sm font-semibold text-white mb-4">Per-Turbine Wake Losses</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={turbineData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} label={{ value: '%', fill: '#94a3b8', position: 'insideLeft' }} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                    formatter={(val) => [`${val.toFixed(2)}%`, 'Wake Loss']}
+                  />
+                  <Bar dataKey="loss" radius={[4, 4, 0, 0]}>
+                    {turbineData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <PlotImage src={result.plots?.wake_by_direction} alt="Wake Losses by Direction" />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

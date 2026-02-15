@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: openoa-app/backend/Dockerfile
+    container_name: openoa-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app/backend
+      - OPENOA_ROOT=/app/OpenOA
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: openoa-app/frontend/Dockerfile
+    container_name: openoa-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
