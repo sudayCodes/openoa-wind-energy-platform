@@ -1,10 +1,11 @@
 """Analysis routes — AEP, Electrical Losses, Wake, Turbine Energy, Gap, Yaw.
 
 Each route:
-  1. Validates that required datasets are loaded (HTTP 400 if not)
-  2. Builds a FRESH PlantData with the correct analysis_type
-  3. Runs the OpenOA analysis
-  4. Returns structured JSON with stats + plots
+  1. Checks that no other analysis is already running (HTTP 429 if busy)
+  2. Validates that required datasets are loaded (HTTP 400 if not)
+  3. Builds a FRESH PlantData with the correct analysis_type
+  4. Runs the OpenOA analysis in a background thread
+  5. Returns structured JSON with stats + plots
 """
 
 from __future__ import annotations
@@ -36,6 +37,14 @@ from services.analysis_runner import (
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
 
+# ── Concurrency guard ──
+# Only ONE analysis may run at a time on this memory-constrained host.
+# Each OpenOA analysis internally deepcopies ~400K-row PlantData; two
+# concurrent copies will OOM the container.  An asyncio.Lock lets the
+# event loop keep serving health-checks while the analysis thread runs.
+_analysis_lock = asyncio.Lock()
+_current_analysis: str | None = None          # name of the running analysis
+
 # Dedicated thread pool for CPU-heavy analysis work so we don't block
 # the uvicorn event loop (critical with a single worker).
 # max_workers=1 prevents concurrent analyses from doubling memory usage.
@@ -48,6 +57,37 @@ async def _run_in_thread(func, *args, **kwargs):
     return await loop.run_in_executor(_analysis_executor, partial(func, *args, **kwargs))
 
 
+async def _guarded_run(analysis_name: str, runner_coro):
+    """
+    Acquire the analysis lock, run the coroutine, and release.
+    Returns HTTP 429 immediately if another analysis is in progress.
+    """
+    global _current_analysis
+    if _analysis_lock.locked():
+        raise HTTPException(
+            status_code=429,
+            detail=f"Another analysis ({_current_analysis}) is already running. "
+                   f"Please wait for it to finish before starting a new one.",
+        )
+    async with _analysis_lock:
+        _current_analysis = analysis_name
+        try:
+            return await runner_coro
+        finally:
+            _current_analysis = None
+            gc.collect()
+
+
+# ── Endpoint to query lock status (useful for frontend) ──
+@router.get("/status")
+async def analysis_status():
+    """Return whether an analysis is currently running."""
+    return {
+        "busy": _analysis_lock.locked(),
+        "current_analysis": _current_analysis,
+    }
+
+
 @router.post("/aep")
 async def aep_analysis(params: AEPRequest):
     """Run Monte Carlo AEP estimation."""
@@ -55,17 +95,21 @@ async def aep_analysis(params: AEPRequest):
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = await _run_in_thread(
-            run_aep,
-            plant=plant,
-            num_sim=params.num_sim,
-            reg_model=params.reg_model,
-            reg_temperature=params.reg_temperature,
-            reg_wind_direction=params.reg_wind_direction,
-            time_resolution=params.time_resolution,
+        result = await _guarded_run(
+            "AEP",
+            _run_in_thread(
+                run_aep,
+                plant=plant,
+                num_sim=params.num_sim,
+                reg_model=params.reg_model,
+                reg_temperature=params.reg_temperature,
+                reg_wind_direction=params.reg_wind_direction,
+                time_resolution=params.time_resolution,
+            ),
         )
-        gc.collect()
         return {"status": "success", "data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"AEP analysis failed: {str(e)}")
@@ -78,15 +122,19 @@ async def electrical_losses_analysis(params: ElectricalLossesRequest):
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = await _run_in_thread(
-            run_electrical_losses,
-            plant=plant,
-            num_sim=params.num_sim,
-            uncertainty_meter=params.uncertainty_meter,
-            uncertainty_scada=params.uncertainty_scada,
+        result = await _guarded_run(
+            "Electrical Losses",
+            _run_in_thread(
+                run_electrical_losses,
+                plant=plant,
+                num_sim=params.num_sim,
+                uncertainty_meter=params.uncertainty_meter,
+                uncertainty_scada=params.uncertainty_scada,
+            ),
         )
-        gc.collect()
         return {"status": "success", "data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Electrical losses analysis failed: {str(e)}")
@@ -99,14 +147,18 @@ async def turbine_energy_analysis(params: TurbineEnergyRequest):
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = await _run_in_thread(
-            run_turbine_energy,
-            plant=plant,
-            num_sim=params.num_sim,
-            uncertainty_scada=params.uncertainty_scada,
+        result = await _guarded_run(
+            "Turbine Energy",
+            _run_in_thread(
+                run_turbine_energy,
+                plant=plant,
+                num_sim=params.num_sim,
+                uncertainty_scada=params.uncertainty_scada,
+            ),
         )
-        gc.collect()
         return {"status": "success", "data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Turbine energy analysis failed: {str(e)}")
@@ -119,15 +171,19 @@ async def wake_losses_analysis(params: WakeLossesRequest):
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = await _run_in_thread(
-            run_wake_losses,
-            plant=plant,
-            num_sim=params.num_sim,
-            wind_direction_col=params.wind_direction_col,
-            wind_direction_data_type=params.wind_direction_data_type,
+        result = await _guarded_run(
+            "Wake Losses",
+            _run_in_thread(
+                run_wake_losses,
+                plant=plant,
+                num_sim=params.num_sim,
+                wind_direction_col=params.wind_direction_col,
+                wind_direction_data_type=params.wind_direction_data_type,
+            ),
         )
-        gc.collect()
         return {"status": "success", "data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Wake losses analysis failed: {str(e)}")
@@ -155,9 +211,13 @@ async def gap_analysis(params: GapAnalysisRequest):
             "electrical_losses": params.oa_electrical_losses,
             "turbine_ideal_energy": params.oa_turbine_ideal_energy,
         }
-        result = await _run_in_thread(run_gap_analysis, plant=plant, eya_estimates=eya, oa_results=oa)
-        gc.collect()
+        result = await _guarded_run(
+            "Gap Analysis",
+            _run_in_thread(run_gap_analysis, plant=plant, eya_estimates=eya, oa_results=oa),
+        )
         return {"status": "success", "data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Gap analysis failed: {str(e)}")
@@ -170,13 +230,17 @@ async def yaw_misalignment_analysis(params: YawMisalignmentRequest):
     if plant is None:
         raise HTTPException(status_code=400, detail=error)
     try:
-        result = await _run_in_thread(
-            run_yaw_misalignment,
-            plant=plant,
-            num_sim=params.num_sim,
+        result = await _guarded_run(
+            "Yaw Misalignment",
+            _run_in_thread(
+                run_yaw_misalignment,
+                plant=plant,
+                num_sim=params.num_sim,
+            ),
         )
-        gc.collect()
         return {"status": "success", "data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Yaw misalignment analysis failed: {str(e)}")
