@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runWakeLosses } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
 import useDataStatus from '../hooks/useDataStatus'
 import { Wind, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
@@ -13,7 +14,7 @@ export default function WakeLosses() {
     wind_direction_col: 'WMET_HorWdDir',
     wind_direction_data_type: 'scada',
   })
-  const [result, setResult] = useState(null)
+  const [result, setResult] = usePersistedResult('wake_losses')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const dataStatus = useDataStatus('WakeLosses')
@@ -78,6 +79,9 @@ export default function WakeLosses() {
 
       {result && (
         <>
+          <div className="flex justify-end mb-4">
+            <DownloadButton onClick={() => downloadResultJSON(result, 'wake_losses_results.json')} />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <StatCard icon={Wind} label="Wake Loss (POR)" value={result.plant_wake_loss_por_pct?.toFixed(2)} unit="%" color="blue" />
             <StatCard icon={Gauge} label="Wake Loss (Long-term)" value={result.plant_wake_loss_lt_pct?.toFixed(2)} unit="%" color="green" />

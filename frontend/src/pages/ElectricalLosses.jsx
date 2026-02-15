@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runElectricalLosses } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
 import useDataStatus from '../hooks/useDataStatus'
 import { Zap, TrendingDown, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -11,7 +12,7 @@ export default function ElectricalLosses() {
     uncertainty_meter: 0.005,
     uncertainty_scada: 0.005,
   })
-  const [result, setResult] = useState(null)
+  const [result, setResult] = usePersistedResult('electrical_losses')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const dataStatus = useDataStatus('ElectricalLosses')
@@ -84,6 +85,9 @@ export default function ElectricalLosses() {
 
       {result && (
         <>
+          <div className="flex justify-end mb-4">
+            <DownloadButton onClick={() => downloadResultJSON(result, 'electrical_losses_results.json')} />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <StatCard icon={Zap} label="Mean Electrical Loss" value={result.mean_loss_pct?.toFixed(2)} unit="%" color="purple" />
             <StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_loss_pct?.toFixed(3)} unit="%" color="yellow" />

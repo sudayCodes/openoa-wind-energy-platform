@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Download } from 'lucide-react'
 
 export function StatCard({ icon: Icon, label, value, unit, color = 'blue', subtext }) {
   const colorMap = {
@@ -68,6 +68,18 @@ export function ErrorAlert({ message }) {
     <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm mb-4">
       <strong>Error:</strong> {message}
     </div>
+  )
+}
+
+export function DownloadButton({ onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors"
+    >
+      <Download className="w-4 h-4" />
+      Download Results
+    </button>
   )
 }
 

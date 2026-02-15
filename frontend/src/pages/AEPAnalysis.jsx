@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runAEP } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
 import useDataStatus from '../hooks/useDataStatus'
 import { BarChart3, TrendingUp, Gauge, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -13,7 +14,7 @@ export default function AEPAnalysis() {
     reg_wind_direction: false,
     time_resolution: 'MS',
   })
-  const [result, setResult] = useState(null)
+  const [result, setResult] = usePersistedResult('aep')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const dataStatus = useDataStatus('MonteCarloAEP')
@@ -115,6 +116,9 @@ export default function AEPAnalysis() {
       {/* Results */}
       {result && (
         <>
+          <div className="flex justify-end mb-4">
+            <DownloadButton onClick={() => downloadResultJSON(result, 'aep_results.json')} />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard icon={BarChart3} label="Mean AEP" value={result.mean_aep_gwh?.toFixed(2)} unit="GWh/yr" color="blue" />
             <StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_aep_gwh?.toFixed(3)} unit="GWh" color="yellow" />

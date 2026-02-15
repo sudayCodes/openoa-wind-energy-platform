@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runTurbineEnergy } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
 import useDataStatus from '../hooks/useDataStatus'
 import { TrendingUp, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
@@ -9,7 +10,7 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 export default function TurbineEnergy() {
   const [params, setParams] = useState({ num_sim: 5, uncertainty_scada: 0.005 })
-  const [result, setResult] = useState(null)
+  const [result, setResult] = usePersistedResult('turbine_energy')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const dataStatus = useDataStatus('TurbineLongTermGrossEnergy')
@@ -72,6 +73,9 @@ export default function TurbineEnergy() {
 
       {result && (
         <>
+          <div className="flex justify-end mb-4">
+            <DownloadButton onClick={() => downloadResultJSON(result, 'turbine_energy_results.json')} />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <StatCard icon={TrendingUp} label="Plant Gross Energy" value={result.mean_plant_gross_gwh?.toFixed(2)} unit="GWh" color="green" />
             <StatCard icon={Gauge} label="Uncertainty (±1σ)" value={result.std_plant_gross_gwh?.toFixed(3)} unit="GWh" color="yellow" />

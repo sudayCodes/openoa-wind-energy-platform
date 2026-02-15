@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { runYawMisalignment } from '../api/client'
-import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
 import useDataStatus from '../hooks/useDataStatus'
 import { Compass } from 'lucide-react'
 
 export default function YawMisalignment() {
   const [params, setParams] = useState({ num_sim: 10 })
-  const [result, setResult] = useState(null)
+  const [result, setResult] = usePersistedResult('yaw_misalignment')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const dataStatus = useDataStatus('StaticYawMisalignment')
@@ -58,6 +59,9 @@ export default function YawMisalignment() {
 
       {result && (
         <>
+          <div className="flex justify-end mb-4">
+            <DownloadButton onClick={() => downloadResultJSON(result, 'yaw_misalignment_results.json')} />
+          </div>
           {turbineYaw.length > 0 && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
               <h3 className="text-sm font-semibold text-white mb-4">Per-Turbine Yaw Misalignment</h3>

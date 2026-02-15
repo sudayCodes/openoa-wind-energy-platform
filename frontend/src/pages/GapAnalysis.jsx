@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runGapAnalysis } from '../api/client'
-import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
 import useDataStatus from '../hooks/useDataStatus'
 import { GitCompareArrows } from 'lucide-react'
 
@@ -18,7 +19,7 @@ export default function GapAnalysis() {
     oa_electrical_losses: 0.03,
     oa_turbine_ideal_energy: 23.0,
   })
-  const [result, setResult] = useState(null)
+  const [result, setResult] = usePersistedResult('gap_analysis')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const dataStatus = useDataStatus('EYAGapAnalysis')
@@ -102,7 +103,11 @@ export default function GapAnalysis() {
       <ErrorAlert message={error} />
 
       {result && (
-        <div className="grid grid-cols-1 gap-4">
+        <>
+          <div className="flex justify-end mb-4">
+            <DownloadButton onClick={() => downloadResultJSON(result, 'gap_analysis_results.json')} />
+          </div>
+          <div className="grid grid-cols-1 gap-4">
           <PlotImage src={result.plots?.waterfall} alt="Gap Analysis Waterfall" />
 
           {result.gap_analysis && Array.isArray(result.gap_analysis) && result.gap_analysis.length > 0 && (
@@ -133,6 +138,7 @@ export default function GapAnalysis() {
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   )
