@@ -52,7 +52,7 @@ export default function YawMisalignment() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4 animate-fade-in">
+          <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'yaw_misalignment_results.json')}
               onDownloadCSV={() => downloadResultCSV(result, 'yaw_misalignment_results.csv')}

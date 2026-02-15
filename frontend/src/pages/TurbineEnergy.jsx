@@ -66,7 +66,7 @@ export default function TurbineEnergy() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4 animate-fade-in">
+          <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'turbine_energy_results.json')}
               onDownloadCSV={() => downloadResultCSV(result, 'turbine_energy_results.csv')}

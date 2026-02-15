@@ -97,7 +97,7 @@ export default function GapAnalysis() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4 animate-fade-in">
+          <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'gap_analysis_results.json')}
               onDownloadCSV={() => downloadResultCSV(result, 'gap_analysis_results.csv')}

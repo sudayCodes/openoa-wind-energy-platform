@@ -55,8 +55,17 @@ export default function AEPAnalysis() {
     }))
   })() : []
 
-  const cfRating = getCapacityFactorRating(result?.capacity_factor_pct)
-  const uncRating = getUncertaintyRating(result?.uncertainty_pct)
+  // Resolve values with fallbacks for old cached results that lack p50/p90/cf fields
+  const p50 = result?.p50_aep_gwh ?? result?.median_aep_gwh ?? null
+  const p90 = result?.p90_aep_gwh ?? null
+  const capacityFactor = result?.capacity_factor_pct ?? null
+  const uncertaintyPct = result?.uncertainty_pct ?? (
+    result?.std_aep_gwh && result?.mean_aep_gwh && result.mean_aep_gwh > 0
+      ? (result.std_aep_gwh / result.mean_aep_gwh) * 100
+      : null
+  )
+  const cfRating = getCapacityFactorRating(capacityFactor)
+  const uncRating = getUncertaintyRating(uncertaintyPct)
 
   return (
     <div>
@@ -128,7 +137,7 @@ export default function AEPAnalysis() {
       {/* Results */}
       {result && (
         <>
-          <div className="flex justify-end mb-4 gap-2 animate-fade-in">
+          <div className="flex justify-end mb-4 gap-2 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'aep_results.json')}
               onDownloadCSV={() => downloadResultCSV(result, 'aep_results.csv')}
@@ -144,18 +153,18 @@ export default function AEPAnalysis() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="text-center">
                 <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Expected AEP (P50)</p>
-                <p className="text-3xl font-bold text-blue-400">{result.p50_aep_gwh?.toFixed(2) ?? '—'}</p>
+                <p className="text-3xl font-bold text-blue-400">{p50?.toFixed(2) ?? '—'}</p>
                 <p className="text-xs text-slate-500">GWh/yr</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Conservative Estimate (P90)</p>
-                <p className="text-3xl font-bold text-emerald-400">{result.p90_aep_gwh?.toFixed(2) ?? '—'}</p>
+                <p className="text-3xl font-bold text-emerald-400">{p90?.toFixed(2) ?? '—'}</p>
                 <p className="text-xs text-slate-500">GWh/yr</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Capacity Factor</p>
                 <p className="text-3xl font-bold">
-                  <span className={cfRating.color}>{result.capacity_factor_pct?.toFixed(1) ?? '—'}</span>
+                  <span className={cfRating.color}>{capacityFactor?.toFixed(1) ?? '—'}</span>
                 </p>
                 <p className={`text-xs ${cfRating.color}`}>{cfRating.label}</p>
               </div>
@@ -165,15 +174,15 @@ export default function AEPAnalysis() {
                 The Monte Carlo analysis ({result.num_simulations} simulations) estimates a
                 <strong className="text-white"> mean AEP of {result.mean_aep_gwh?.toFixed(2)} GWh/yr</strong> with
                 a standard deviation of {result.std_aep_gwh?.toFixed(3)} GWh
-                ({result.uncertainty_pct != null ? <span className={uncRating.color}>{result.uncertainty_pct.toFixed(1)}% uncertainty — {uncRating.label}</span> : 'N/A'}).
-                {result.p50_aep_gwh != null && result.p90_aep_gwh != null && (
-                  <> The P50/P90 spread of {(result.p50_aep_gwh - result.p90_aep_gwh).toFixed(3)} GWh indicates the
+                ({uncertaintyPct != null ? <span className={uncRating.color}>{uncertaintyPct.toFixed(1)}% uncertainty — {uncRating.label}</span> : 'N/A'}).
+                {p50 != null && p90 != null && (
+                  <> The P50/P90 spread of {(p50 - p90).toFixed(3)} GWh indicates the
                   range between the median expectation and the conservative financing scenario.</>
                 )}
-                {result.capacity_factor_pct != null && (
-                  <> At a <strong className={cfRating.color}>{result.capacity_factor_pct.toFixed(1)}%</strong> capacity factor
+                {capacityFactor != null && (
+                  <> At a <strong className={cfRating.color}>{capacityFactor.toFixed(1)}%</strong> capacity factor
                   ({cfRating.label.toLowerCase()}), this plant
-                  {result.capacity_factor_pct >= 30 ? ' is performing well relative to industry benchmarks.' : ' may benefit from further investigation into operational improvements.'}
+                  {capacityFactor >= 30 ? ' is performing well relative to industry benchmarks.' : ' may benefit from further investigation into operational improvements.'}
                   </>
                 )}
                 {result.mean_avail_pct != null && (
@@ -189,13 +198,13 @@ export default function AEPAnalysis() {
               <StatCard icon={BarChart3} label="Mean AEP" value={result.mean_aep_gwh?.toFixed(2)} unit="GWh/yr" color="blue" />
             </div>
             <div className="animate-fade-in-up delay-150">
-              <StatCard icon={Target} label="P50 (Median)" value={result.p50_aep_gwh?.toFixed(2)} unit="GWh/yr" color="cyan" />
+              <StatCard icon={Target} label="P50 (Median)" value={p50?.toFixed(2)} unit="GWh/yr" color="cyan" />
             </div>
             <div className="animate-fade-in-up delay-200">
-              <StatCard icon={Activity} label="P90 (Conservative)" value={result.p90_aep_gwh?.toFixed(2)} unit="GWh/yr" color="green" />
+              <StatCard icon={Activity} label="P90 (Conservative)" value={p90?.toFixed(2)} unit="GWh/yr" color="green" />
             </div>
             <div className="animate-fade-in-up delay-300">
-              <StatCard icon={Zap} label="Capacity Factor" value={result.capacity_factor_pct?.toFixed(1)} unit="%" color="purple" subtext={cfRating.label} />
+              <StatCard icon={Zap} label="Capacity Factor" value={capacityFactor?.toFixed(1)} unit="%" color="purple" subtext={cfRating.label} />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

@@ -72,7 +72,7 @@ export default function WakeLosses() {
 
       {result && (
         <>
-          <div className="flex justify-end mb-4 animate-fade-in">
+          <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'wake_losses_results.json')}
               onDownloadCSV={() => downloadResultCSV(result, 'wake_losses_results.csv')}
