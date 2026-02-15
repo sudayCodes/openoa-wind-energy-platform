@@ -1,3 +1,5 @@
+import { AlertTriangle, CheckCircle } from 'lucide-react'
+
 export function StatCard({ icon: Icon, label, value, unit, color = 'blue', subtext }) {
   const colorMap = {
     blue: 'bg-blue-500/20 text-blue-400',
@@ -63,8 +65,36 @@ export function PageHeader({ title, description, icon: Icon }) {
 export function ErrorAlert({ message }) {
   if (!message) return null
   return (
-    <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
+    <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm mb-4">
       <strong>Error:</strong> {message}
+    </div>
+  )
+}
+
+export function DataRequirementBanner({ ready, missing, description, source }) {
+  if (ready) {
+    return (
+      <div className="mb-4 px-4 py-3 rounded-lg border bg-emerald-500/10 border-emerald-500/20 flex items-center gap-2">
+        <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+        <span className="text-xs text-emerald-400">
+          All required datasets loaded ({source === 'demo' ? 'demo data' : 'custom data'}).
+          Ready to run analysis.
+        </span>
+      </div>
+    )
+  }
+  return (
+    <div className="mb-4 px-4 py-3 rounded-lg border bg-red-500/10 border-red-500/20">
+      <div className="flex items-center gap-2 mb-1">
+        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+        <span className="text-sm font-medium text-red-400">Missing Required Data</span>
+      </div>
+      <p className="text-xs text-red-400/80 ml-6">
+        {description || `Missing datasets: ${missing.join(', ')}`}
+      </p>
+      <p className="text-xs text-red-400/60 ml-6 mt-1">
+        Go to <a href="/upload" className="underline hover:text-red-300">Upload Data</a> to add the required CSVs.
+      </p>
     </div>
   )
 }

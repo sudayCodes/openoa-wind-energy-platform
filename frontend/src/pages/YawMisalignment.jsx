@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runYawMisalignment } from '../api/client'
-import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert } from '../components/UI'
+import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import useDataStatus from '../hooks/useDataStatus'
 import { Compass } from 'lucide-react'
 
 export default function YawMisalignment() {
@@ -8,6 +9,7 @@ export default function YawMisalignment() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const dataStatus = useDataStatus('StaticYawMisalignment')
 
   const handleRun = () => {
     setLoading(true)
@@ -30,6 +32,8 @@ export default function YawMisalignment() {
         description="Detect static yaw misalignment for individual turbines as a function of wind speed"
       />
 
+      <DataRequirementBanner {...dataStatus} />
+
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
         <h3 className="text-sm font-semibold text-white mb-4">Configuration</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -41,10 +45,10 @@ export default function YawMisalignment() {
             />
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading}
-          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors"
+        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
-          {loading ? 'Running...' : 'Run Yaw Misalignment Analysis'}
+          {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Yaw Misalignment Analysis'}
         </button>
       </div>
 

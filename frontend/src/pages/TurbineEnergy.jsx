@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runTurbineEnergy } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import useDataStatus from '../hooks/useDataStatus'
 import { TrendingUp, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
 
@@ -11,6 +12,7 @@ export default function TurbineEnergy() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const dataStatus = useDataStatus('TurbineLongTermGrossEnergy')
 
   const handleRun = () => {
     setLoading(true)
@@ -37,6 +39,8 @@ export default function TurbineEnergy() {
         description="Estimate per-turbine gross energy using GAM models fit to SCADA + reanalysis data"
       />
 
+      <DataRequirementBanner {...dataStatus} />
+
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
         <h3 className="text-sm font-semibold text-white mb-4">Configuration</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -55,10 +59,10 @@ export default function TurbineEnergy() {
             />
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading}
-          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors"
+        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
-          {loading ? 'Running...' : 'Run Turbine Energy Analysis'}
+          {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Turbine Energy Analysis'}
         </button>
       </div>
 

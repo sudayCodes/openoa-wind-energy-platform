@@ -7,9 +7,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from core.plant_manager import init_plant, is_loading, get_plant
+from core.plant_manager import init_plant, is_loading, get_plant, get_loaded_status
 from api.routes.plant import router as plant_router
 from api.routes.analysis import router as analysis_router
+from api.routes.upload import router as upload_router
 
 
 @asynccontextmanager
@@ -45,14 +46,16 @@ app.add_middleware(
 # Routes
 app.include_router(plant_router, prefix="/api")
 app.include_router(analysis_router, prefix="/api")
+app.include_router(upload_router, prefix="/api")
 
 
 @app.get("/api/health")
 def health_check():
     """Health check endpoint."""
-    plant = get_plant()
+    status = get_loaded_status()
     return {
         "status": "ok",
-        "plant_loaded": plant is not None,
+        "plant_loaded": status.get("scada", False),
         "loading": is_loading(),
+        "datasets": status,
     }

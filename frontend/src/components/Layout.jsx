@@ -1,12 +1,14 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import {
   LayoutDashboard, Database, BarChart3, Zap, Wind,
-  TrendingUp, GitCompareArrows, Compass, Menu, X
+  TrendingUp, GitCompareArrows, Compass, Menu, X, Upload
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getDataStatus } from '../api/client'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/upload', icon: Upload, label: 'Upload Data' },
   { to: '/data', icon: Database, label: 'Data Explorer' },
   { to: '/aep', icon: BarChart3, label: 'AEP Analysis' },
   { to: '/electrical', icon: Zap, label: 'Electrical Losses' },
@@ -18,6 +20,20 @@ const navItems = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [dataSource, setDataSource] = useState('demo')
+
+  useEffect(() => {
+    getDataStatus()
+      .then(res => setDataSource(res.data.source || 'demo'))
+      .catch(() => {})
+    // Poll every 10 seconds for source updates
+    const interval = setInterval(() => {
+      getDataStatus()
+        .then(res => setDataSource(res.data.source || 'demo'))
+        .catch(() => {})
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="flex h-screen bg-slate-950">
@@ -85,8 +101,12 @@ export default function Layout() {
             <Menu className="w-5 h-5" />
           </button>
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full font-medium">
-              Demo: La Haute Borne
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              dataSource === 'custom'
+                ? 'bg-amber-500/20 text-amber-400'
+                : 'bg-emerald-500/20 text-emerald-400'
+            }`}>
+              {dataSource === 'custom' ? 'Custom Data' : 'Demo: La Haute Borne'}
             </span>
           </div>
         </header>

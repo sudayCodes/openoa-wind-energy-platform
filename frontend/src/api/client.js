@@ -7,10 +7,25 @@ const api = axios.create({
   timeout: 300000, // 5 min for long analyses
 });
 
+// ── Plant ──
 export const getHealth = () => api.get('/health');
 export const getPlantSummary = () => api.get('/plant/summary');
 export const getScadaPreview = () => api.get('/plant/scada-preview');
 
+// ── Data Upload ──
+export const uploadCSV = (datasetType, file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post(`/data/upload/${datasetType}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  });
+};
+export const getDataStatus = () => api.get('/data/status');
+export const resetData = () => api.post('/data/reset');
+export const getTemplates = () => api.get('/data/templates');
+
+// ── Analyses ──
 export const runAEP = (params) => api.post('/analysis/aep', params);
 export const runElectricalLosses = (params) => api.post('/analysis/electrical-losses', params);
 export const runTurbineEnergy = (params) => api.post('/analysis/turbine-energy', params);

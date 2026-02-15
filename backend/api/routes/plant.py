@@ -7,7 +7,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import PlantSummary, TurbineInfo, ScadaPreview
-from core.plant_manager import get_plant
+from core.plant_manager import get_plant, get_store_source
 
 router = APIRouter(prefix="/plant", tags=["Plant"])
 
@@ -56,8 +56,11 @@ def plant_summary():
     reanalysis_products = list(plant.reanalysis.keys()) if plant.reanalysis else []
     meter_rows = len(plant.meter) if plant.meter is not None else 0
 
+    source = get_store_source()
+    plant_name = "La Haute Borne Wind Farm" if source == "demo" else "Custom Wind Farm"
+
     return PlantSummary(
-        name="La Haute Borne Wind Farm",
+        name=plant_name,
         latitude=float(plant.metadata.latitude),
         longitude=float(plant.metadata.longitude),
         capacity_mw=float(plant.metadata.capacity),

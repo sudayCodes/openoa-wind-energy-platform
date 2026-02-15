@@ -1,4 +1,11 @@
-"""Analysis routes — AEP, Electrical Losses, Wake, Turbine Energy, Gap, Yaw."""
+"""Analysis routes — AEP, Electrical Losses, Wake, Turbine Energy, Gap, Yaw.
+
+Each route:
+  1. Validates that required datasets are loaded (HTTP 400 if not)
+  2. Builds a FRESH PlantData with the correct analysis_type
+  3. Runs the OpenOA analysis
+  4. Returns structured JSON with stats + plots
+"""
 
 from __future__ import annotations
 
@@ -13,7 +20,7 @@ from api.schemas import (
     GapAnalysisRequest,
     YawMisalignmentRequest,
 )
-from core.plant_manager import get_plant
+from core.plant_manager import build_plant, get_plant
 from services.analysis_runner import (
     run_aep,
     run_electrical_losses,
@@ -29,9 +36,9 @@ router = APIRouter(prefix="/analysis", tags=["Analysis"])
 @router.post("/aep")
 def aep_analysis(params: AEPRequest):
     """Run Monte Carlo AEP estimation."""
-    plant = get_plant()
+    plant, error = build_plant("MonteCarloAEP")
     if plant is None:
-        raise HTTPException(status_code=404, detail="No plant data loaded")
+        raise HTTPException(status_code=400, detail=error)
     try:
         result = run_aep(
             plant=plant,
@@ -50,9 +57,9 @@ def aep_analysis(params: AEPRequest):
 @router.post("/electrical-losses")
 def electrical_losses_analysis(params: ElectricalLossesRequest):
     """Run electrical losses analysis."""
-    plant = get_plant()
+    plant, error = build_plant("ElectricalLosses")
     if plant is None:
-        raise HTTPException(status_code=404, detail="No plant data loaded")
+        raise HTTPException(status_code=400, detail=error)
     try:
         result = run_electrical_losses(
             plant=plant,
@@ -69,9 +76,9 @@ def electrical_losses_analysis(params: ElectricalLossesRequest):
 @router.post("/turbine-energy")
 def turbine_energy_analysis(params: TurbineEnergyRequest):
     """Run turbine long-term gross energy analysis."""
-    plant = get_plant()
+    plant, error = build_plant("TurbineLongTermGrossEnergy")
     if plant is None:
-        raise HTTPException(status_code=404, detail="No plant data loaded")
+        raise HTTPException(status_code=400, detail=error)
     try:
         result = run_turbine_energy(
             plant=plant,
@@ -87,9 +94,9 @@ def turbine_energy_analysis(params: TurbineEnergyRequest):
 @router.post("/wake-losses")
 def wake_losses_analysis(params: WakeLossesRequest):
     """Run wake losses analysis."""
-    plant = get_plant()
+    plant, error = build_plant("WakeLosses")
     if plant is None:
-        raise HTTPException(status_code=404, detail="No plant data loaded")
+        raise HTTPException(status_code=400, detail=error)
     try:
         result = run_wake_losses(
             plant=plant,
@@ -106,9 +113,9 @@ def wake_losses_analysis(params: WakeLossesRequest):
 @router.post("/gap-analysis")
 def gap_analysis(params: GapAnalysisRequest):
     """Run EYA gap analysis."""
-    plant = get_plant()
+    plant, error = build_plant("EYAGapAnalysis")
     if plant is None:
-        raise HTTPException(status_code=404, detail="No plant data loaded")
+        raise HTTPException(status_code=400, detail=error)
     try:
         eya = {
             "aep": params.eya_aep,
@@ -135,9 +142,9 @@ def gap_analysis(params: GapAnalysisRequest):
 @router.post("/yaw-misalignment")
 def yaw_misalignment_analysis(params: YawMisalignmentRequest):
     """Run static yaw misalignment analysis."""
-    plant = get_plant()
+    plant, error = build_plant("StaticYawMisalignment")
     if plant is None:
-        raise HTTPException(status_code=404, detail="No plant data loaded")
+        raise HTTPException(status_code=400, detail=error)
     try:
         result = run_yaw_misalignment(
             plant=plant,

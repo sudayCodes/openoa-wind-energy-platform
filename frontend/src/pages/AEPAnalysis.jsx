@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runAEP } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import useDataStatus from '../hooks/useDataStatus'
 import { BarChart3, TrendingUp, Gauge, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
@@ -15,6 +16,7 @@ export default function AEPAnalysis() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const dataStatus = useDataStatus('MonteCarloAEP')
 
   const handleRun = () => {
     setLoading(true)
@@ -50,6 +52,8 @@ export default function AEPAnalysis() {
         title="Annual Energy Production (AEP)"
         description="Monte Carlo estimation of long-term AEP with uncertainty quantification"
       />
+
+      <DataRequirementBanner {...dataStatus} />
 
       {/* Config Panel */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
@@ -97,10 +101,10 @@ export default function AEPAnalysis() {
             Include Wind Direction
           </label>
         </div>
-        <button onClick={handleRun} disabled={loading}
-          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors"
+        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
-          {loading ? 'Running...' : 'Run AEP Analysis'}
+          {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run AEP Analysis'}
         </button>
       </div>
 

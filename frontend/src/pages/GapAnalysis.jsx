@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runGapAnalysis } from '../api/client'
-import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert } from '../components/UI'
+import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import useDataStatus from '../hooks/useDataStatus'
 import { GitCompareArrows } from 'lucide-react'
 
 export default function GapAnalysis() {
@@ -20,6 +21,7 @@ export default function GapAnalysis() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const dataStatus = useDataStatus('EYAGapAnalysis')
 
   const handleRun = () => {
     setLoading(true)
@@ -50,6 +52,8 @@ export default function GapAnalysis() {
         title="EYA Gap Analysis"
         description="Compare pre-construction EYA predictions vs operational assessment results"
       />
+
+      <DataRequirementBanner {...dataStatus} />
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -84,10 +88,10 @@ export default function GapAnalysis() {
             </div>
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading}
-          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors"
+        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
-          {loading ? 'Running...' : 'Run Gap Analysis'}
+          {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Gap Analysis'}
         </button>
       </div>
 

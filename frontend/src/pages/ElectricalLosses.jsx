@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { runElectricalLosses } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner } from '../components/UI'
+import useDataStatus from '../hooks/useDataStatus'
 import { Zap, TrendingDown, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
@@ -13,6 +14,7 @@ export default function ElectricalLosses() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const dataStatus = useDataStatus('ElectricalLosses')
 
   const handleRun = () => {
     setLoading(true)
@@ -42,6 +44,8 @@ export default function ElectricalLosses() {
         description="Estimate average electrical losses by comparing turbine SCADA to revenue meter data"
       />
 
+      <DataRequirementBanner {...dataStatus} />
+
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
         <h3 className="text-sm font-semibold text-white mb-4">Configuration</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -67,10 +71,10 @@ export default function ElectricalLosses() {
             />
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading}
-          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors"
+        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+          className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
-          {loading ? 'Running...' : 'Run Electrical Losses Analysis'}
+          {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Electrical Losses Analysis'}
         </button>
       </div>
 
