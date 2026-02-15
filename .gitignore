@@ -5,3 +5,6 @@ __pycache__
 .git
 .DS_Store
 uploads/*
+*.egg-info
+.eggs
+build/
