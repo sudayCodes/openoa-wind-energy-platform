@@ -44,7 +44,8 @@ RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 # Also ensure no default server block in main nginx.conf
 RUN sed -i '/include \/etc\/nginx\/sites-enabled/d' /etc/nginx/nginx.conf
 # Use localhost instead of Docker service name for single-container
-RUN sed -i 's/proxy_pass http:\/\/backend:8000/proxy_pass http:\/\/127.0.0.1:8000/' /etc/nginx/conf.d/default.conf
+RUN sed -i 's/backend:8000/127.0.0.1:8000/g' /etc/nginx/conf.d/default.conf \
+    && sed -i 's/backend_server/backend_local/g' /etc/nginx/conf.d/default.conf
 
 # Supervisor config (runs both Nginx + Uvicorn)
 # Use envsubst to inject PORT at runtime for Railway/Render compatibility
@@ -54,7 +55,7 @@ nodaemon=true
 logfile=/var/log/supervisord.log
 
 [program:backend]
-command=uvicorn main:app --host 0.0.0.0 --port 8000
+command=uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-keep-alive 120
 directory=/app/backend
 environment=PYTHONPATH="/app/backend",OPENOA_ROOT="/app/OpenOA"
 autostart=true

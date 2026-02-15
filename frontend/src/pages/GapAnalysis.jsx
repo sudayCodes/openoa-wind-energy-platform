@@ -56,6 +56,8 @@ export default function GapAnalysis() {
       <DataRequirementBanner {...dataStatus} />
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+        <h3 className="text-sm font-semibold text-white mb-1">Analysis Settings</h3>
+        <p className="text-xs text-slate-500 mb-4">Enter the EYA predictions and OA results to compare. Your uploaded/demo data is used automatically for plant context.</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* EYA */}
           <div>

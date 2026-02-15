@@ -55,9 +55,10 @@ export default function AEPAnalysis() {
 
       <DataRequirementBanner {...dataStatus} />
 
-      {/* Config Panel */}
+      {/* Analysis Settings Panel */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
-        <h3 className="text-sm font-semibold text-white mb-4">Configuration</h3>
+        <h3 className="text-sm font-semibold text-white mb-1">Analysis Settings</h3>
+        <p className="text-xs text-slate-500 mb-4">Tune the analysis parameters below. Your uploaded/demo data is used automatically — no need to re-upload.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <FormField label="Monte Carlo Simulations">
             <input type="number" value={params.num_sim}
