@@ -40,7 +40,9 @@ COPY --from=frontend-build /app/dist /usr/share/nginx/html
 
 # Nginx config
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
-RUN rm -f /etc/nginx/sites-enabled/default
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
+# Also ensure no default server block in main nginx.conf
+RUN sed -i '/include \/etc\/nginx\/sites-enabled/d' /etc/nginx/nginx.conf
 # Use localhost instead of Docker service name for single-container
 RUN sed -i 's/proxy_pass http:\/\/backend:8000/proxy_pass http:\/\/127.0.0.1:8000/' /etc/nginx/conf.d/default.conf
 
