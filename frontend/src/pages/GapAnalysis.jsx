@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { runGapAnalysis } from '../api/client'
 import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
 import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { GitCompareArrows } from 'lucide-react'
 
@@ -20,18 +21,10 @@ export default function GapAnalysis() {
     oa_turbine_ideal_energy: 23.0,
   })
   const [result, setResult] = usePersistedResult('gap_analysis')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const { run, loading, waiting, error } = useAnalysisRunner(runGapAnalysis, setResult, 'Gap Analysis')
   const dataStatus = useDataStatus('EYAGapAnalysis')
 
-  const handleRun = () => {
-    setLoading(true)
-    setError(null)
-    runGapAnalysis(params)
-      .then(res => setResult(res.data.data))
-      .catch(err => setError(err.response?.data?.detail || err.message))
-      .finally(() => setLoading(false))
-  }
+  const handleRun = () => run(params)
 
   const fields = [
     { key: 'eya_aep', label: 'EYA AEP (GWh/yr)', group: 'eya' },
@@ -92,14 +85,14 @@ export default function GapAnalysis() {
             </div>
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+        <button onClick={handleRun} disabled={loading || waiting || !dataStatus.ready}
           className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
           {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Gap Analysis'}
         </button>
       </div>
 
-      {loading && <LoadingSpinner text="Running EYA gap analysis..." />}
+      {(loading || waiting) && <LoadingSpinner text={waiting ? 'Analysis is still processing on the server — please wait...' : 'Running EYA gap analysis...'} />}
       <ErrorAlert message={error} />
 
       {result && (

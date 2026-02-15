@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { runAEP } from '../api/client'
 import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
 import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { BarChart3, TrendingUp, Gauge, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -15,18 +16,10 @@ export default function AEPAnalysis() {
     time_resolution: 'MS',
   })
   const [result, setResult] = usePersistedResult('aep')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const { run, loading, waiting, error } = useAnalysisRunner(runAEP, setResult, 'AEP')
   const dataStatus = useDataStatus('MonteCarloAEP')
 
-  const handleRun = () => {
-    setLoading(true)
-    setError(null)
-    runAEP(params)
-      .then(res => setResult(res.data.data))
-      .catch(err => setError(err.response?.data?.detail || err.message))
-      .finally(() => setLoading(false))
-  }
+  const handleRun = () => run(params)
 
   // Build histogram data for Recharts
   const histData = result?.distribution ? (() => {
@@ -103,14 +96,14 @@ export default function AEPAnalysis() {
             Include Wind Direction
           </label>
         </div>
-        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+        <button onClick={handleRun} disabled={loading || waiting || !dataStatus.ready}
           className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
           {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run AEP Analysis'}
         </button>
       </div>
 
-      {loading && <LoadingSpinner text="Running Monte Carlo AEP analysis..." />}
+      {(loading || waiting) && <LoadingSpinner text={waiting ? 'Analysis is still processing on the server — please wait...' : 'Running Monte Carlo AEP analysis...'} />}
       <ErrorAlert message={error} />
 
       {/* Results */}

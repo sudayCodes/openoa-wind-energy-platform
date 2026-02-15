@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { runTurbineEnergy } from '../api/client'
 import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
 import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { TrendingUp, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
@@ -11,18 +12,10 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 export default function TurbineEnergy() {
   const [params, setParams] = useState({ num_sim: 5, uncertainty_scada: 0.005 })
   const [result, setResult] = usePersistedResult('turbine_energy')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const { run, loading, waiting, error } = useAnalysisRunner(runTurbineEnergy, setResult, 'Turbine Energy')
   const dataStatus = useDataStatus('TurbineLongTermGrossEnergy')
 
-  const handleRun = () => {
-    setLoading(true)
-    setError(null)
-    runTurbineEnergy(params)
-      .then(res => setResult(res.data.data))
-      .catch(err => setError(err.response?.data?.detail || err.message))
-      .finally(() => setLoading(false))
-  }
+  const handleRun = () => run(params)
 
   const turbineData = result?.turbine_gross_energy
     ? Object.entries(result.turbine_gross_energy).map(([id, val]) => ({
@@ -61,14 +54,14 @@ export default function TurbineEnergy() {
             />
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+        <button onClick={handleRun} disabled={loading || waiting || !dataStatus.ready}
           className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
           {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Turbine Energy Analysis'}
         </button>
       </div>
 
-      {loading && <LoadingSpinner text="Running turbine gross energy analysis..." />}
+      {(loading || waiting) && <LoadingSpinner text={waiting ? 'Analysis is still processing on the server — please wait...' : 'Running turbine gross energy analysis...'} />}
       <ErrorAlert message={error} />
 
       {result && (

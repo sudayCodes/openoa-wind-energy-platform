@@ -32,5 +32,7 @@ export const runTurbineEnergy = (params) => api.post('/analysis/turbine-energy',
 export const runWakeLosses = (params) => api.post('/analysis/wake-losses', params);
 export const runGapAnalysis = (params) => api.post('/analysis/gap-analysis', params);
 export const runYawMisalignment = (params) => api.post('/analysis/yaw-misalignment', params);
+export const getAnalysisStatus = () => api.get('/analysis/status', { timeout: 10000 });
+export const getLastResult = () => api.get('/analysis/last-result', { timeout: 30000 });
 
 export default api;

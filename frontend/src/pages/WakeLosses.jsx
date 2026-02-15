@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { runWakeLosses } from '../api/client'
 import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
 import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { Wind, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
@@ -15,18 +16,10 @@ export default function WakeLosses() {
     wind_direction_data_type: 'scada',
   })
   const [result, setResult] = usePersistedResult('wake_losses')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const { run, loading, waiting, error } = useAnalysisRunner(runWakeLosses, setResult, 'Wake Losses')
   const dataStatus = useDataStatus('WakeLosses')
 
-  const handleRun = () => {
-    setLoading(true)
-    setError(null)
-    runWakeLosses(params)
-      .then(res => setResult(res.data.data))
-      .catch(err => setError(err.response?.data?.detail || err.message))
-      .finally(() => setLoading(false))
-  }
+  const handleRun = () => run(params)
 
   const turbineData = result?.turbine_wake_losses
     ? Object.entries(result.turbine_wake_losses).map(([id, val]) => ({
@@ -67,14 +60,14 @@ export default function WakeLosses() {
             </select>
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+        <button onClick={handleRun} disabled={loading || waiting || !dataStatus.ready}
           className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
           {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Wake Losses Analysis'}
         </button>
       </div>
 
-      {loading && <LoadingSpinner text="Running wake losses analysis..." />}
+      {(loading || waiting) && <LoadingSpinner text={waiting ? 'Analysis is still processing on the server — please wait...' : 'Running wake losses analysis...'} />}
       <ErrorAlert message={error} />
 
       {result && (

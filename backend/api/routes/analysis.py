@@ -6,6 +6,9 @@ Each route:
   3. Builds a FRESH PlantData with the correct analysis_type
   4. Runs the OpenOA analysis in a background thread
   5. Returns structured JSON with stats + plots
+
+If the frontend times out before the backend finishes, the result is
+cached in _last_result so the frontend can retrieve it by polling.
 """
 
 from __future__ import annotations
@@ -38,16 +41,14 @@ from services.analysis_runner import (
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
 
 # ── Concurrency guard ──
-# Only ONE analysis may run at a time on this memory-constrained host.
-# Each OpenOA analysis internally deepcopies ~400K-row PlantData; two
-# concurrent copies will OOM the container.  An asyncio.Lock lets the
-# event loop keep serving health-checks while the analysis thread runs.
 _analysis_lock = asyncio.Lock()
-_current_analysis: str | None = None          # name of the running analysis
+_current_analysis: str | None = None
 
-# Dedicated thread pool for CPU-heavy analysis work so we don't block
-# the uvicorn event loop (critical with a single worker).
-# max_workers=1 prevents concurrent analyses from doubling memory usage.
+# Cache the last completed result so the frontend can fetch it even if
+# the original HTTP request timed out (e.g. Railway 30-s proxy, axios).
+_last_result: dict | None = None        # {"analysis": str, "data": ...}
+_last_error: str | None = None          # error message if analysis failed
+
 _analysis_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="analysis")
 
 
@@ -61,8 +62,9 @@ async def _guarded_run(analysis_name: str, runner_coro):
     """
     Acquire the analysis lock, run the coroutine, and release.
     Returns HTTP 429 immediately if another analysis is in progress.
+    Caches the result in _last_result for later retrieval.
     """
-    global _current_analysis
+    global _current_analysis, _last_result, _last_error
     if _analysis_lock.locked():
         raise HTTPException(
             status_code=429,
@@ -71,8 +73,15 @@ async def _guarded_run(analysis_name: str, runner_coro):
         )
     async with _analysis_lock:
         _current_analysis = analysis_name
+        _last_result = None
+        _last_error = None
         try:
-            return await runner_coro
+            result = await runner_coro
+            _last_result = {"analysis": analysis_name, "data": result}
+            return result
+        except Exception as exc:
+            _last_error = f"{analysis_name} failed: {str(exc)}"
+            raise
         finally:
             _current_analysis = None
             gc.collect()
@@ -81,11 +90,25 @@ async def _guarded_run(analysis_name: str, runner_coro):
 # ── Endpoint to query lock status (useful for frontend) ──
 @router.get("/status")
 async def analysis_status():
-    """Return whether an analysis is currently running."""
+    """Return whether an analysis is currently running and if a result is ready."""
     return {
         "busy": _analysis_lock.locked(),
         "current_analysis": _current_analysis,
+        "has_result": _last_result is not None,
+        "last_error": _last_error,
     }
+
+
+@router.get("/last-result")
+async def last_result():
+    """Return the cached result from the most recent completed analysis.
+    
+    This is used by the frontend when the original HTTP request timed out
+    but the backend kept running and finished successfully.
+    """
+    if _last_result is None:
+        raise HTTPException(status_code=404, detail="No cached result available")
+    return {"status": "success", **_last_result}
 
 
 @router.post("/aep")

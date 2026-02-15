@@ -2,24 +2,17 @@ import { useState } from 'react'
 import { runYawMisalignment } from '../api/client'
 import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
 import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { Compass } from 'lucide-react'
 
 export default function YawMisalignment() {
   const [params, setParams] = useState({ num_sim: 10 })
   const [result, setResult] = usePersistedResult('yaw_misalignment')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const { run, loading, waiting, error } = useAnalysisRunner(runYawMisalignment, setResult, 'Yaw Misalignment')
   const dataStatus = useDataStatus('StaticYawMisalignment')
 
-  const handleRun = () => {
-    setLoading(true)
-    setError(null)
-    runYawMisalignment(params)
-      .then(res => setResult(res.data.data))
-      .catch(err => setError(err.response?.data?.detail || err.message))
-      .finally(() => setLoading(false))
-  }
+  const handleRun = () => run(params)
 
   const turbineYaw = result?.turbine_yaw_misalignment
     ? Object.entries(result.turbine_yaw_misalignment)
@@ -47,14 +40,14 @@ export default function YawMisalignment() {
             />
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+        <button onClick={handleRun} disabled={loading || waiting || !dataStatus.ready}
           className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
           {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Yaw Misalignment Analysis'}
         </button>
       </div>
 
-      {loading && <LoadingSpinner text="Running yaw misalignment analysis..." />}
+      {(loading || waiting) && <LoadingSpinner text={waiting ? 'Analysis is still processing on the server — please wait...' : 'Running yaw misalignment analysis...'} />}
       <ErrorAlert message={error} />
 
       {result && (

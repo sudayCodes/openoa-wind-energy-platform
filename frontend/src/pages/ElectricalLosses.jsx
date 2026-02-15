@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { runElectricalLosses } from '../api/client'
 import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
 import usePersistedResult, { downloadResultJSON } from '../hooks/usePersistedResult'
+import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
 import { Zap, TrendingDown, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -13,18 +14,10 @@ export default function ElectricalLosses() {
     uncertainty_scada: 0.005,
   })
   const [result, setResult] = usePersistedResult('electrical_losses')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const { run, loading, waiting, error } = useAnalysisRunner(runElectricalLosses, setResult, 'Electrical Losses')
   const dataStatus = useDataStatus('ElectricalLosses')
 
-  const handleRun = () => {
-    setLoading(true)
-    setError(null)
-    runElectricalLosses(params)
-      .then(res => setResult(res.data.data))
-      .catch(err => setError(err.response?.data?.detail || err.message))
-      .finally(() => setLoading(false))
-  }
+  const handleRun = () => run(params)
 
   const histData = result?.distribution ? (() => {
     const vals = result.distribution.filter(v => v != null)
@@ -73,14 +66,14 @@ export default function ElectricalLosses() {
             />
           </div>
         </div>
-        <button onClick={handleRun} disabled={loading || !dataStatus.ready}
+        <button onClick={handleRun} disabled={loading || waiting || !dataStatus.ready}
           className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
           {loading ? 'Running...' : !dataStatus.ready ? 'Missing Required Data' : 'Run Electrical Losses Analysis'}
         </button>
       </div>
 
-      {loading && <LoadingSpinner text="Running electrical losses analysis..." />}
+      {(loading || waiting) && <LoadingSpinner text={waiting ? 'Analysis is still processing on the server — please wait...' : 'Running electrical losses analysis...'} />}
       <ErrorAlert message={error} />
 
       {result && (
