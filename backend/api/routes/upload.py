@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import traceback
+from functools import partial
 
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -24,10 +26,9 @@ from services.validators import (
 router = APIRouter(prefix="/data", tags=["Data Upload"])
 
 
-def _read_csv(file: UploadFile) -> pd.DataFrame:
-    """Read an uploaded file into a DataFrame."""
-    contents = file.file.read()
-    return pd.read_csv(io.BytesIO(contents))
+def _parse_csv_bytes(raw: bytes) -> pd.DataFrame:
+    """Parse raw CSV bytes into a DataFrame (runs in thread pool)."""
+    return pd.read_csv(io.BytesIO(raw))
 
 
 @router.post("/upload/{dataset_type}")
@@ -48,7 +49,11 @@ async def upload_csv(dataset_type: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Only CSV files are supported.")
 
     try:
-        df = _read_csv(file)
+        # Read file bytes first (async-safe), then parse CSV in thread pool
+        # so we don't block the event loop (which causes 502 on slow containers)
+        raw = await file.read()
+        loop = asyncio.get_running_loop()
+        df = await loop.run_in_executor(None, _parse_csv_bytes, raw)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse CSV: {str(e)}")
 

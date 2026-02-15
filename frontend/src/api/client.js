@@ -18,7 +18,7 @@ export const uploadCSV = (datasetType, file) => {
   formData.append('file', file);
   return api.post(`/data/upload/${datasetType}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 60000,
+    timeout: 300000, // 5 min — large SCADA CSVs (20+ MB) need time to upload + parse
   });
 };
 export const getDataStatus = () => api.get('/data/status');
