@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runYawMisalignment } from '../api/client'
-import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton, CachedResultBanner } from '../components/UI'
 import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
@@ -8,9 +8,9 @@ import { Compass } from 'lucide-react'
 
 export default function YawMisalignment() {
   const [params, setParams] = useState({ num_sim: 10 })
-  const [result, setResult] = usePersistedResult('yaw_misalignment')
-  const { run, loading, waiting, error } = useAnalysisRunner(runYawMisalignment, setResult, 'Yaw Misalignment')
+  const [result, setResult, resultMeta, isFreshRun] = usePersistedResult('yaw_misalignment')
   const dataStatus = useDataStatus('StaticYawMisalignment')
+  const { run, loading, waiting, error } = useAnalysisRunner(runYawMisalignment, setResult, 'Yaw Misalignment', dataStatus.source)
 
   const handleRun = () => run(params)
 
@@ -52,6 +52,12 @@ export default function YawMisalignment() {
 
       {result && (
         <>
+          <CachedResultBanner
+            resultMeta={resultMeta}
+            isFreshRun={isFreshRun}
+            currentSource={dataStatus.source}
+            onClear={() => setResult(null)}
+          />
           <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'yaw_misalignment_results.json')}

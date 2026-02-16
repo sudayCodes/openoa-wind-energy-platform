@@ -12,8 +12,10 @@ import { getAnalysisStatus, getLastResult } from '../api/client'
  * Returns { run, loading, waiting, error }
  *   - loading: the initial HTTP request is in-flight
  *   - waiting: the request timed out but the backend is still running
+ *
+ * `setResult` signature: (data, source?) => void  (matches usePersistedResult)
  */
-export default function useAnalysisRunner(apiFn, setResult, analysisLabel) {
+export default function useAnalysisRunner(apiFn, setResult, analysisLabel, dataSource) {
   const [loading, setLoading] = useState(false)
   const [waiting, setWaiting] = useState(false) // backend still running after frontend timeout
   const [error, setError] = useState(null)
@@ -46,7 +48,7 @@ export default function useAnalysisRunner(apiFn, setResult, analysisLabel) {
             // Fetch the cached result
             try {
               const r = await getLastResult()
-              setResult(r.data.data)
+              setResult(r.data.data, dataSource)
             } catch {
               setError('Analysis finished but failed to fetch results.')
             }
@@ -72,7 +74,7 @@ export default function useAnalysisRunner(apiFn, setResult, analysisLabel) {
 
       apiFn(params)
         .then((res) => {
-          setResult(res.data.data)
+          setResult(res.data.data, dataSource)
           setLoading(false)
         })
         .catch((err) => {

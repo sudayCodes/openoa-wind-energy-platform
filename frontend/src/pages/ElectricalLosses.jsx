@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runElectricalLosses } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton, CachedResultBanner } from '../components/UI'
 import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
@@ -13,9 +13,9 @@ export default function ElectricalLosses() {
     uncertainty_meter: 0.005,
     uncertainty_scada: 0.005,
   })
-  const [result, setResult] = usePersistedResult('electrical_losses')
-  const { run, loading, waiting, error } = useAnalysisRunner(runElectricalLosses, setResult, 'Electrical Losses')
+  const [result, setResult, resultMeta, isFreshRun] = usePersistedResult('electrical_losses')
   const dataStatus = useDataStatus('ElectricalLosses')
+  const { run, loading, waiting, error } = useAnalysisRunner(runElectricalLosses, setResult, 'Electrical Losses', dataStatus.source)
 
   const handleRun = () => run(params)
 
@@ -78,6 +78,12 @@ export default function ElectricalLosses() {
 
       {result && (
         <>
+          <CachedResultBanner
+            resultMeta={resultMeta}
+            isFreshRun={isFreshRun}
+            currentSource={dataStatus.source}
+            onClear={() => setResult(null)}
+          />
           <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'electrical_losses_results.json')}

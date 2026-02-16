@@ -1,38 +1,80 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const STORAGE_PREFIX = 'openoa_result_'
 
 /**
  * Like useState but persists the value in localStorage under a unique key.
- * When the component mounts it restores the last saved result.
- * Calling setResult(data) saves to localStorage; setResult(null) clears it.
+ * Stores metadata alongside the result: timestamp, data source, etc.
+ *
+ * Returns [result, setResult, resultMeta, isFreshRun]
+ *   - result:     the raw analysis data (or null)
+ *   - setResult:  (data, source?) => void — auto-stamps metadata
+ *   - resultMeta: { timestamp, source } of the cached result
+ *   - isFreshRun: boolean — true only after setResult is called during this
+ *                 page visit (i.e. the user clicked "Run" and got new results)
  */
 export default function usePersistedResult(analysisKey) {
   const storageKey = STORAGE_PREFIX + analysisKey
 
-  const [result, setResultRaw] = useState(() => {
+  // Load persisted envelope { data, _meta }
+  const [envelope, setEnvelopeRaw] = useState(() => {
     try {
       const stored = localStorage.getItem(storageKey)
-      return stored ? JSON.parse(stored) : null
+      if (!stored) return null
+      const parsed = JSON.parse(stored)
+      // Support old format (raw data without _meta wrapper)
+      if (parsed && !parsed._meta) {
+        return { data: parsed, _meta: { timestamp: null, source: 'unknown' } }
+      }
+      return parsed
     } catch {
       return null
     }
   })
 
-  // Keep localStorage in sync whenever result changes
+  // Track whether the user has run the analysis during *this* page visit
+  const freshRef = useRef(false)
+  const [isFreshRun, setIsFreshRun] = useState(false)
+
+  // Keep localStorage in sync
   useEffect(() => {
     try {
-      if (result === null) {
+      if (envelope === null) {
         localStorage.removeItem(storageKey)
       } else {
-        localStorage.setItem(storageKey, JSON.stringify(result))
+        localStorage.setItem(storageKey, JSON.stringify(envelope))
       }
     } catch {
       // localStorage full or unavailable — silently ignore
     }
-  }, [result, storageKey])
+  }, [envelope, storageKey])
 
-  return [result, setResultRaw]
+  /**
+   * Save a new result. Pass `source` (e.g. "demo" / "custom") to stamp it.
+   * Passing null clears the result.
+   */
+  const setResult = useCallback((data, source) => {
+    if (data === null) {
+      setEnvelopeRaw(null)
+      freshRef.current = false
+      setIsFreshRun(false)
+      return
+    }
+    setEnvelopeRaw({
+      data,
+      _meta: {
+        timestamp: new Date().toISOString(),
+        source: source || 'unknown',
+      },
+    })
+    freshRef.current = true
+    setIsFreshRun(true)
+  }, [])
+
+  const result = envelope?.data ?? null
+  const resultMeta = envelope?._meta ?? null
+
+  return [result, setResult, resultMeta, isFreshRun]
 }
 
 /**

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runWakeLosses } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton, CachedResultBanner } from '../components/UI'
 import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
@@ -15,9 +15,9 @@ export default function WakeLosses() {
     wind_direction_col: 'WMET_HorWdDir',
     wind_direction_data_type: 'scada',
   })
-  const [result, setResult] = usePersistedResult('wake_losses')
-  const { run, loading, waiting, error } = useAnalysisRunner(runWakeLosses, setResult, 'Wake Losses')
+  const [result, setResult, resultMeta, isFreshRun] = usePersistedResult('wake_losses')
   const dataStatus = useDataStatus('WakeLosses')
+  const { run, loading, waiting, error } = useAnalysisRunner(runWakeLosses, setResult, 'Wake Losses', dataStatus.source)
 
   const handleRun = () => run(params)
 
@@ -72,6 +72,12 @@ export default function WakeLosses() {
 
       {result && (
         <>
+          <CachedResultBanner
+            resultMeta={resultMeta}
+            isFreshRun={isFreshRun}
+            currentSource={dataStatus.source}
+            onClear={() => setResult(null)}
+          />
           <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'wake_losses_results.json')}

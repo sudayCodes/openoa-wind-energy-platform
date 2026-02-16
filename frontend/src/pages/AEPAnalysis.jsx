@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runAEP } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton, CachedResultBanner } from '../components/UI'
 import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
@@ -31,9 +31,9 @@ export default function AEPAnalysis() {
     reg_wind_direction: false,
     time_resolution: 'MS',
   })
-  const [result, setResult] = usePersistedResult('aep')
-  const { run, loading, waiting, error } = useAnalysisRunner(runAEP, setResult, 'AEP')
+  const [result, setResult, resultMeta, isFreshRun] = usePersistedResult('aep')
   const dataStatus = useDataStatus('MonteCarloAEP')
+  const { run, loading, waiting, error } = useAnalysisRunner(runAEP, setResult, 'AEP', dataStatus.source)
 
   const handleRun = () => run(params)
 
@@ -137,6 +137,12 @@ export default function AEPAnalysis() {
       {/* Results */}
       {result && (
         <>
+          <CachedResultBanner
+            resultMeta={resultMeta}
+            isFreshRun={isFreshRun}
+            currentSource={dataStatus.source}
+            onClear={() => setResult(null)}
+          />
           <div className="flex justify-end mb-4 gap-2 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'aep_results.json')}

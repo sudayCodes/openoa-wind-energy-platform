@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runTurbineEnergy } from '../api/client'
-import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import { StatCard, PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton, CachedResultBanner } from '../components/UI'
 import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
@@ -11,9 +11,9 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 export default function TurbineEnergy() {
   const [params, setParams] = useState({ num_sim: 5, uncertainty_scada: 0.005 })
-  const [result, setResult] = usePersistedResult('turbine_energy')
-  const { run, loading, waiting, error } = useAnalysisRunner(runTurbineEnergy, setResult, 'Turbine Energy')
+  const [result, setResult, resultMeta, isFreshRun] = usePersistedResult('turbine_energy')
   const dataStatus = useDataStatus('TurbineLongTermGrossEnergy')
+  const { run, loading, waiting, error } = useAnalysisRunner(runTurbineEnergy, setResult, 'Turbine Energy', dataStatus.source)
 
   const handleRun = () => run(params)
 
@@ -66,6 +66,12 @@ export default function TurbineEnergy() {
 
       {result && (
         <>
+          <CachedResultBanner
+            resultMeta={resultMeta}
+            isFreshRun={isFreshRun}
+            currentSource={dataStatus.source}
+            onClear={() => setResult(null)}
+          />
           <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'turbine_energy_results.json')}

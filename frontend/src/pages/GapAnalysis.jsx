@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runGapAnalysis } from '../api/client'
-import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton } from '../components/UI'
+import { PlotImage, LoadingSpinner, PageHeader, ErrorAlert, DataRequirementBanner, DownloadButton, CachedResultBanner } from '../components/UI'
 import usePersistedResult, { downloadResultJSON, downloadResultCSV } from '../hooks/usePersistedResult'
 import useAnalysisRunner from '../hooks/useAnalysisRunner'
 import useDataStatus from '../hooks/useDataStatus'
@@ -20,9 +20,9 @@ export default function GapAnalysis() {
     oa_electrical_losses: 0.03,
     oa_turbine_ideal_energy: 23.0,
   })
-  const [result, setResult] = usePersistedResult('gap_analysis')
-  const { run, loading, waiting, error } = useAnalysisRunner(runGapAnalysis, setResult, 'Gap Analysis')
+  const [result, setResult, resultMeta, isFreshRun] = usePersistedResult('gap_analysis')
   const dataStatus = useDataStatus('EYAGapAnalysis')
+  const { run, loading, waiting, error } = useAnalysisRunner(runGapAnalysis, setResult, 'Gap Analysis', dataStatus.source)
 
   const handleRun = () => run(params)
 
@@ -97,6 +97,12 @@ export default function GapAnalysis() {
 
       {result && (
         <>
+          <CachedResultBanner
+            resultMeta={resultMeta}
+            isFreshRun={isFreshRun}
+            currentSource={dataStatus.source}
+            onClear={() => setResult(null)}
+          />
           <div className="flex justify-end mb-4 animate-fade-in relative z-20">
             <DownloadButton
               onDownloadJSON={() => downloadResultJSON(result, 'gap_analysis_results.json')}
