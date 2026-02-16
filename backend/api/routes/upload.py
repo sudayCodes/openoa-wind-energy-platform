@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+
 import asyncio
 import io
 import traceback
 from functools import partial
+import os
+import uuid
 
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -48,12 +51,23 @@ async def upload_csv(dataset_type: str, file: UploadFile = File(...)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are supported.")
 
+
+    # Save uploaded file to /backend/tmp/session-id/dataset_type.csv
+    session_id = 'default'  # For now, single-user; can be replaced with real session logic
+    tmp_dir = os.path.join(os.path.dirname(__file__), '../tmp', session_id)
+    os.makedirs(tmp_dir, exist_ok=True)
+    file_path = os.path.join(tmp_dir, f'{dataset_type}.csv')
     try:
-        # Read file bytes first (async-safe), then parse CSV in thread pool
-        # so we don't block the event loop (which causes 502 on slow containers)
-        raw = await file.read()
+        with open(file_path, 'wb') as f:
+            content = await file.read()
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(e)}")
+
+    # Parse CSV from saved file
+    try:
         loop = asyncio.get_running_loop()
-        df = await loop.run_in_executor(None, _parse_csv_bytes, raw)
+        df = await loop.run_in_executor(None, pd.read_csv, file_path)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse CSV: {str(e)}")
 

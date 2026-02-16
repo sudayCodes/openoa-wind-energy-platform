@@ -15,10 +15,9 @@ from __future__ import annotations
 import gc
 import traceback
 from typing import Any, Optional
-
+import os
 import pandas as pd
 from openoa.plant import PlantData
-
 from services.data_loader import load_demo_plant
 from services.validators import validate_analysis_requirements
 
@@ -76,6 +75,7 @@ def set_dataset(dataset_type: str, df: pd.DataFrame):
     """
     Store a user-uploaded dataset and rebuild PlantData.
     Only the datasets the user has actually uploaded are tracked.
+    Also saves the uploaded CSV to disk for persistence.
     """
     global _source, _custom_plant
 
@@ -83,7 +83,26 @@ def set_dataset(dataset_type: str, df: pd.DataFrame):
     key = "curtail" if dataset_type == "curtailment" else dataset_type
     _raw_uploads[key] = df
     _source = "custom"
+    # Save to disk for persistence (already handled in upload route)
     _rebuild_custom_plant()
+
+
+def _load_from_tmp_or_memory(dataset_type: str):
+    """
+    Try to load the dataset from /backend/tmp/default/{dataset_type}.csv if it exists.
+    Fallback to in-memory if not found.
+    """
+    session_id = 'default'
+    tmp_dir = os.path.join(os.path.dirname(__file__), '../tmp', session_id)
+    file_path = os.path.join(tmp_dir, f'{dataset_type}.csv')
+    if os.path.exists(file_path):
+        try:
+            return pd.read_csv(file_path)
+        except Exception:
+            pass
+    # Fallback to in-memory
+    key = "curtail" if dataset_type == "curtailment" else dataset_type
+    return _raw_uploads.get(key)
 
 
 def _rebuild_custom_plant():
@@ -96,11 +115,11 @@ def _rebuild_custom_plant():
     # so that PlantData construction doesn't fail.
     demo = _load_demo_cached()
 
-    scada = _raw_uploads["scada"]
-    asset = _raw_uploads["asset"]
-    meter = _raw_uploads["meter"]
-    curtail = _raw_uploads["curtail"]
-    reanalysis = _raw_uploads["reanalysis"]
+    scada = _load_from_tmp_or_memory("scada")
+    asset = _load_from_tmp_or_memory("asset")
+    meter = _load_from_tmp_or_memory("meter")
+    curtail = _load_from_tmp_or_memory("curtailment")
+    reanalysis = _load_from_tmp_or_memory("reanalysis")
 
     # Fall back to demo for scada/asset if user hasn't uploaded them
     if scada is None:
