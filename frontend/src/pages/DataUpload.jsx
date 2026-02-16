@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { uploadCSV, getDataStatus, resetData, getTemplates } from '../api/client'
 import { PageHeader, ErrorAlert, LoadingSpinner } from '../components/UI'
+import ColumnGlossary from '../components/ColumnGlossary'
 import { Upload, CheckCircle, XCircle, RotateCcw, FileText, AlertTriangle, Info } from 'lucide-react'
 
 const DATASET_CONFIG = [
@@ -170,6 +171,9 @@ export default function DataUpload() {
           </div>
         </div>
       )}
+
+      {/* Column Name Glossary Dropdown */}
+      <ColumnGlossary />
 
       {/* Upload Cards */}
       <div className="space-y-4">
