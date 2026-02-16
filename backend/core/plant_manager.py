@@ -2,15 +2,18 @@
 Data Manager — central store for PlantData + raw upload DataFrames.
 
 Architecture:
-  - On startup: loads demo dataset as a single PlantData object
-  - On CSV upload: stores raw DataFrames, rebuilds PlantData from them
-  - For each analysis: validates required datasets, returns the PlantData
+  - On startup: loads demo dataset as a single PlantData object (cached)
+  - On CSV upload: stores ONLY the user-uploaded DataFrames
+  - get_loaded_status() reports only what the user actually uploaded
+  - Analyses check requirements against loaded status
   - Stateless (no database) — new upload replaces previous dataset
   - Single-user demo
 """
 
 from __future__ import annotations
 
+import gc
+import traceback
 from typing import Any, Optional
 
 import pandas as pd
@@ -21,11 +24,12 @@ from services.validators import validate_analysis_requirements
 
 
 # ── Global state ──
-_plant: Optional[PlantData] = None
+_demo_plant: Optional[PlantData] = None   # cached demo (loaded once, reused on reset)
+_custom_plant: Optional[PlantData] = None  # rebuilt from user uploads (if any)
 _loading: bool = False
 _source: str = "none"  # "demo" | "custom"
 
-# Raw DataFrames for custom uploads (used to rebuild PlantData)
+# Raw DataFrames for custom uploads ONLY (never filled with demo data)
 _raw_uploads: dict[str, Any] = {
     "scada": None,
     "meter": None,
@@ -35,14 +39,21 @@ _raw_uploads: dict[str, Any] = {
 }
 
 
+def _load_demo_cached() -> PlantData:
+    """Load demo plant once and cache it for the process lifetime."""
+    global _demo_plant
+    if _demo_plant is None:
+        _demo_plant = load_demo_plant()
+    return _demo_plant
+
+
 def init_demo():
     """Load demo dataset on startup."""
-    global _plant, _loading, _source
-    if _plant is not None:
-        return
+    global _loading, _source, _custom_plant
     _loading = True
     try:
-        _plant = load_demo_plant()
+        _load_demo_cached()
+        _custom_plant = None
         _source = "demo"
     finally:
         _loading = False
@@ -50,110 +61,90 @@ def init_demo():
 
 def reset_to_demo():
     """Reset all data back to the demo dataset."""
-    global _plant, _source, _raw_uploads
+    global _source, _raw_uploads, _custom_plant
+    # Clear custom uploads
     _raw_uploads = {k: None for k in _raw_uploads}
-    _plant = None
-    _source = "none"
-    init_demo()
+    # Free the custom plant
+    _custom_plant = None
+    gc.collect()
+    # Switch back to cached demo
+    _source = "demo"
+    _load_demo_cached()
 
 
 def set_dataset(dataset_type: str, df: pd.DataFrame):
     """
     Store a user-uploaded dataset and rebuild PlantData.
-    First upload: extracts raw data from the existing PlantData object
-    (no re-loading from disk) so the user only needs to upload what they
-    want to override.
+    Only the datasets the user has actually uploaded are tracked.
     """
-    global _plant, _source, _raw_uploads
-
-    # On first custom upload, extract raw data from the *existing* PlantData
-    # rather than re-loading from disk (which doubles memory and causes OOM).
-    if _source == "demo" and _plant is not None:
-        _extract_raw_from_plant(_plant)
+    global _source, _custom_plant
 
     # Normalize key: frontend sends "curtailment" but internal key is "curtail"
     key = "curtail" if dataset_type == "curtailment" else dataset_type
     _raw_uploads[key] = df
     _source = "custom"
-    _rebuild_plant()
+    _rebuild_custom_plant()
 
 
-def _extract_raw_from_plant(plant: PlantData):
-    """Extract raw DataFrames from an existing PlantData object (zero I/O)."""
-    global _raw_uploads
-    try:
-        if plant.scada is not None and len(plant.scada) > 0:
-            _raw_uploads["scada"] = plant.scada.reset_index()
-    except Exception:
-        pass
-    try:
-        if plant.meter is not None and len(plant.meter) > 0:
-            _raw_uploads["meter"] = plant.meter.reset_index() if "time" in plant.meter.index.names else plant.meter.copy()
-    except Exception:
-        pass
-    try:
-        if plant.curtail is not None and len(plant.curtail) > 0:
-            _raw_uploads["curtail"] = plant.curtail.reset_index() if "time" in plant.curtail.index.names else plant.curtail.copy()
-    except Exception:
-        pass
-    try:
-        if plant.reanalysis is not None and len(plant.reanalysis) > 0:
-            _raw_uploads["reanalysis"] = {
-                k: v.reset_index() if "time" in v.index.names or "datetime" in v.index.names else v.copy()
-                for k, v in plant.reanalysis.items()
-            }
-    except Exception:
-        pass
-    try:
-        if plant.asset is not None and len(plant.asset) > 0:
-            _raw_uploads["asset"] = plant.asset.reset_index() if plant.asset.index.name else plant.asset.copy()
-    except Exception:
-        pass
-
-
-def _rebuild_plant():
-    """Rebuild PlantData from raw uploads."""
-    global _plant
-    import gc
+def _rebuild_custom_plant():
+    """Rebuild a PlantData from user uploads + demo fallback for missing pieces."""
+    global _custom_plant
     from core.config import METADATA_YML
 
-    # Need at least scada + asset to build a valid PlantData
-    if _raw_uploads["scada"] is None or _raw_uploads["asset"] is None:
-        print("⚠️ Cannot rebuild PlantData: need at least scada + asset")
-        return
+    # We need at least scada + asset to build PlantData.
+    # For any dataset the user hasn't uploaded, pull from the demo plant
+    # so that PlantData construction doesn't fail.
+    demo = _load_demo_cached()
+
+    scada = _raw_uploads["scada"]
+    asset = _raw_uploads["asset"]
+    meter = _raw_uploads["meter"]
+    curtail = _raw_uploads["curtail"]
+    reanalysis = _raw_uploads["reanalysis"]
+
+    # Fall back to demo for scada/asset if user hasn't uploaded them
+    if scada is None:
+        scada = demo.scada.reset_index()
+    if asset is None:
+        asset = demo.asset.reset_index() if demo.asset.index.name else demo.asset.copy()
+
+    # For optional datasets, only pass them if user uploaded them
+    # (don't mix in demo data — that would be misleading)
+    if isinstance(reanalysis, pd.DataFrame):
+        reanalysis = {"user_reanalysis": reanalysis}
 
     try:
-        reanalysis = _raw_uploads["reanalysis"]
-        if isinstance(reanalysis, pd.DataFrame):
-            reanalysis = {"user_reanalysis": reanalysis}
-
-        _plant = PlantData(
+        _custom_plant = PlantData(
             analysis_type=None,
             metadata=METADATA_YML,
-            scada=_raw_uploads["scada"],
-            meter=_raw_uploads["meter"],
-            curtail=_raw_uploads["curtail"],
-            asset=_raw_uploads["asset"],
+            scada=scada,
+            meter=meter,
+            curtail=curtail,
+            asset=asset,
             reanalysis=reanalysis,
         )
         gc.collect()
     except Exception as e:
         print(f"⚠️ Failed to rebuild PlantData: {e}")
-        import traceback
         traceback.print_exc()
 
 
 def get_loaded_status() -> dict[str, bool]:
-    """Return which datasets are currently loaded."""
-    if _source == "demo" and _plant is not None:
+    """
+    Return which datasets are currently loaded.
+    In demo mode: everything the demo has.
+    In custom mode: ONLY what the user actually uploaded.
+    """
+    if _source == "demo":
+        demo = _load_demo_cached()
         return {
-            "scada": _plant.scada is not None and len(_plant.scada) > 0,
-            "meter": _plant.meter is not None and len(_plant.meter) > 0,
-            "reanalysis": _plant.reanalysis is not None and len(_plant.reanalysis) > 0,
-            "curtailment": _plant.curtail is not None and len(_plant.curtail) > 0,
-            "asset": _plant.asset is not None and len(_plant.asset) > 0,
+            "scada": demo.scada is not None and len(demo.scada) > 0,
+            "meter": demo.meter is not None and len(demo.meter) > 0,
+            "reanalysis": demo.reanalysis is not None and len(demo.reanalysis) > 0,
+            "curtailment": demo.curtail is not None and len(demo.curtail) > 0,
+            "asset": demo.asset is not None and len(demo.asset) > 0,
         }
-    # Custom mode: check raw uploads
+    # Custom mode: ONLY report datasets the user has uploaded
     return {
         "scada": _raw_uploads["scada"] is not None,
         "meter": _raw_uploads["meter"] is not None,
@@ -166,37 +157,38 @@ def get_loaded_status() -> dict[str, bool]:
 def get_data_info() -> dict[str, Any]:
     """Return detailed info about loaded datasets."""
     status = get_loaded_status()
+    plant = get_plant()
     info: dict[str, Any] = {
         "source": _source,
         "datasets": {},
     }
-    if _plant is None:
+    if plant is None:
         return info
 
     if status["scada"]:
         info["datasets"]["scada"] = {
-            "rows": len(_plant.scada),
-            "columns": list(_plant.scada.reset_index().columns),
+            "rows": len(plant.scada),
+            "columns": list(plant.scada.reset_index().columns),
         }
     if status["meter"]:
         info["datasets"]["meter"] = {
-            "rows": len(_plant.meter),
-            "columns": list(_plant.meter.columns),
+            "rows": len(plant.meter),
+            "columns": list(plant.meter.columns),
         }
     if status["reanalysis"]:
         info["datasets"]["reanalysis"] = {
-            "products": list(_plant.reanalysis.keys()),
-            "rows": {k: len(v) for k, v in _plant.reanalysis.items()},
+            "products": list(plant.reanalysis.keys()) if plant.reanalysis else [],
+            "rows": {k: len(v) for k, v in plant.reanalysis.items()} if plant.reanalysis else {},
         }
     if status["curtailment"]:
         info["datasets"]["curtailment"] = {
-            "rows": len(_plant.curtail),
-            "columns": list(_plant.curtail.columns),
+            "rows": len(plant.curtail),
+            "columns": list(plant.curtail.columns),
         }
     if status["asset"]:
         info["datasets"]["asset"] = {
-            "rows": len(_plant.asset),
-            "columns": list(_plant.asset.columns),
+            "rows": len(plant.asset),
+            "columns": list(plant.asset.columns),
         }
     return info
 
@@ -210,7 +202,8 @@ def build_plant(analysis_type: str) -> tuple[Optional[PlantData], str]:
     (via attrs ``field(converter=deepcopy)``), so copying here would
     triple memory usage and cause OOM on memory-constrained hosts.
     """
-    if _plant is None:
+    plant = get_plant()
+    if plant is None:
         return None, "No plant data loaded. Load demo or upload CSVs first."
 
     status = get_loaded_status()
@@ -218,7 +211,7 @@ def build_plant(analysis_type: str) -> tuple[Optional[PlantData], str]:
     if not valid:
         return None, error
 
-    return _plant, ""
+    return plant, ""
 
 
 def get_store_source() -> str:
@@ -229,11 +222,11 @@ def is_loading() -> bool:
     return _loading
 
 
-# ── Backward compatibility ──
-
 def get_plant() -> Optional[PlantData]:
-    """Get the current PlantData (for summary/preview endpoints)."""
-    return _plant
+    """Get the current PlantData (demo or custom)."""
+    if _source == "custom" and _custom_plant is not None:
+        return _custom_plant
+    return _demo_plant
 
 
 def init_plant():
