@@ -68,9 +68,17 @@ export function PageHeader({ title, description, icon: Icon }) {
 
 export function ErrorAlert({ message }) {
   if (!message) return null
+  let friendly = message
+  if (typeof message === 'string') {
+    if (message.includes('502') || message.toLowerCase().includes('bad gateway')) {
+      friendly = 'The server took too long to respond or is temporarily unavailable. Please try again in a moment.'
+    } else if (message.includes('custom') && message.includes('demo')) {
+      friendly = 'Your uploaded data is no longer available. The app has reverted to demo data. Please re-upload your files to continue.'
+    }
+  }
   return (
     <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm mb-4 animate-scale-in">
-      <strong>Error:</strong> {message}
+      <strong>Error:</strong> {friendly}
     </div>
   )
 }
@@ -158,26 +166,40 @@ export function CachedResultBanner({ resultMeta, isFreshRun, currentSource, onCl
     : resultMeta.source === 'custom' ? 'uploaded data'
     : 'previous data'
 
+  // Show a special warning if backend is demo but cached result is custom
+  const showSourceMismatch = resultMeta.source === 'custom' && currentSource === 'demo'
+
   return (
     <div className={`mb-4 px-4 py-3 rounded-lg border flex items-start gap-3 animate-fade-in ${
-      sourceChanged
+      showSourceMismatch
+        ? 'bg-red-500/10 border-red-500/30'
+        : sourceChanged
         ? 'bg-amber-500/10 border-amber-500/25'
         : 'bg-slate-800/60 border-slate-700/60'
     }`}>
-      <Clock className={`w-4 h-4 mt-0.5 shrink-0 ${sourceChanged ? 'text-amber-400' : 'text-slate-400'}`} />
+      <Clock className={`w-4 h-4 mt-0.5 shrink-0 ${showSourceMismatch ? 'text-red-400' : sourceChanged ? 'text-amber-400' : 'text-slate-400'}`} />
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium ${sourceChanged ? 'text-amber-300' : 'text-slate-300'}`}>
-          {sourceChanged
-            ? 'Results from a different data source'
-            : 'Showing results from a previous run'}
-        </p>
-        <p className={`text-xs mt-0.5 ${sourceChanged ? 'text-amber-400/70' : 'text-slate-500'}`}>
-          {sourceChanged ? (
-            <>These results were computed using <strong>{sourceLabel}</strong>, but you are now using <strong>{currentSource === 'demo' ? 'demo data' : 'uploaded data'}</strong>. Click <strong>"Run"</strong> to re-analyse with the current dataset.</>
-          ) : (
-            <>Cached from {timeStr ? <>{timeStr} · </> : null}{sourceLabel}. Click <strong>"Run"</strong> to compute fresh results.</>
-          )}
-        </p>
+        {showSourceMismatch ? (
+          <>
+            <p className="text-sm font-medium text-red-400">Your uploaded data is no longer available</p>
+            <p className="text-xs mt-0.5 text-red-300">The server has reverted to demo data, but cached results from your previous upload are still shown. Please re-upload your files to continue working with custom data.</p>
+          </>
+        ) : (
+          <>
+            <p className={`text-sm font-medium ${sourceChanged ? 'text-amber-300' : 'text-slate-300'}`}>
+              {sourceChanged
+                ? 'Results from a different data source'
+                : 'Showing results from a previous run'}
+            </p>
+            <p className={`text-xs mt-0.5 ${sourceChanged ? 'text-amber-400/70' : 'text-slate-500'}`}>
+              {sourceChanged ? (
+                <>These results were computed using <strong>{sourceLabel}</strong>, but you are now using <strong>{currentSource === 'demo' ? 'demo data' : 'uploaded data'}</strong>. Click <strong>"Run"</strong> to re-analyse with the current dataset.</>
+              ) : (
+                <>Cached from {timeStr ? <>{timeStr} · </> : null}{sourceLabel}. Click <strong>"Run"</strong> to compute fresh results.</>
+              )}
+            </p>
+          </>
+        )}
       </div>
       {onClear && (
         <button onClick={onClear}

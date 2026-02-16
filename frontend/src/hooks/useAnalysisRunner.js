@@ -88,6 +88,7 @@ export default function useAnalysisRunner(apiFn, setResult, analysisLabel, dataS
             err.message?.includes('Network Error')
 
           const is429 = err.response?.status === 429
+          const is502 = err.response?.status === 502
 
           if (isTimeout) {
             // Don't show error — switch to polling mode
@@ -95,6 +96,8 @@ export default function useAnalysisRunner(apiFn, setResult, analysisLabel, dataS
           } else if (is429) {
             // Another analysis is already running, poll for its completion
             setError(err.response?.data?.detail || 'Another analysis is already running.')
+          } else if (is502) {
+            setError('502: The server took too long to respond or is temporarily unavailable. Please try again in a moment.')
           } else {
             setError(err.response?.data?.detail || err.message)
           }
