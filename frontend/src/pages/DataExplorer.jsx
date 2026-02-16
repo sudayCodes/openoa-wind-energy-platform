@@ -1,19 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { getScadaPreview } from '../api/client'
 import { LoadingSpinner, PageHeader } from '../components/UI'
-import { Database } from 'lucide-react'
+import { Database, RefreshCw, Info } from 'lucide-react'
 
 export default function DataExplorer() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    setError(null)
     getScadaPreview()
       .then(res => setData(res.data))
       .catch(err => setError(err.response?.data?.detail || err.message))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   if (loading) return <LoadingSpinner text="Loading SCADA data..." />
   if (error) return <div className="text-red-400">Error: {error}</div>
@@ -25,6 +31,26 @@ export default function DataExplorer() {
         title="Data Explorer"
         description={`SCADA dataset with ${data.total_rows.toLocaleString()} records across ${data.columns.length} columns`}
       />
+
+      {/* Data Source Indicator */}
+      <div className={`mb-5 px-4 py-3 rounded-lg border flex items-center justify-between animate-fade-in ${
+        data.source === 'custom'
+          ? 'bg-amber-500/10 border-amber-500/25'
+          : 'bg-blue-500/10 border-blue-500/25'
+      }`}>
+        <div className="flex items-center gap-2">
+          <Info className={`w-4 h-4 ${data.source === 'custom' ? 'text-amber-400' : 'text-blue-400'}`} />
+          <span className={`text-xs font-medium ${data.source === 'custom' ? 'text-amber-300' : 'text-blue-300'}`}>
+            {data.source === 'custom'
+              ? 'Exploring your uploaded SCADA data'
+              : 'Exploring demo SCADA data (La Haute Borne). Upload your own CSVs to see custom data here.'}
+          </span>
+        </div>
+        <button onClick={fetchData} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors" title="Refresh data">
+          <RefreshCw className="w-3.5 h-3.5" />
+          Refresh
+        </button>
+      </div>
 
       {/* Column Stats */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">

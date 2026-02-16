@@ -31,6 +31,7 @@ class PlantSummary(BaseModel):
     avg_wind_speed: Optional[float] = None
     avg_power_kw: Optional[float] = None
     capacity_factor: Optional[float] = None
+    source: str = "demo"  # "demo" or "custom"
 
 
 class ScadaPreview(BaseModel):
@@ -38,6 +39,7 @@ class ScadaPreview(BaseModel):
     sample_rows: list[dict[str, Any]]
     column_stats: dict[str, dict[str, Any]]
     total_rows: int
+    source: str = "demo"  # "demo" or "custom"
 
 
 # ── Analysis Request Schemas ──

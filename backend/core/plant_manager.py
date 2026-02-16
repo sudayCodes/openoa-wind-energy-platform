@@ -71,7 +71,9 @@ def set_dataset(dataset_type: str, df: pd.DataFrame):
     if _source == "demo" and _plant is not None:
         _extract_raw_from_plant(_plant)
 
-    _raw_uploads[dataset_type] = df
+    # Normalize key: frontend sends "curtailment" but internal key is "curtail"
+    key = "curtail" if dataset_type == "curtailment" else dataset_type
+    _raw_uploads[key] = df
     _source = "custom"
     _rebuild_plant()
 

@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { getPlantSummary } from '../api/client'
 import { StatCard, LoadingSpinner, PageHeader } from '../components/UI'
 import {
   LayoutDashboard, Wind, Zap, MapPin, Calendar,
-  Database, TrendingUp, Gauge
+  Database, TrendingUp, Gauge, RefreshCw, Info
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -11,12 +11,18 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    setError(null)
     getPlantSummary()
       .then(res => setPlant(res.data))
       .catch(err => setError(err.response?.data?.detail || err.message))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   if (loading) return <LoadingSpinner text="Loading plant data..." />
   if (error) return <div className="text-red-400">Error: {error}</div>
@@ -28,6 +34,26 @@ export default function Dashboard() {
         title="Plant Dashboard"
         description={`${plant.name} — ${plant.capacity_mw} MW wind farm with ${plant.num_turbines} turbines`}
       />
+
+      {/* Data Source Indicator */}
+      <div className={`mb-5 px-4 py-3 rounded-lg border flex items-center justify-between animate-fade-in ${
+        plant.source === 'custom'
+          ? 'bg-amber-500/10 border-amber-500/25'
+          : 'bg-blue-500/10 border-blue-500/25'
+      }`}>
+        <div className="flex items-center gap-2">
+          <Info className={`w-4 h-4 ${plant.source === 'custom' ? 'text-amber-400' : 'text-blue-400'}`} />
+          <span className={`text-xs font-medium ${plant.source === 'custom' ? 'text-amber-300' : 'text-blue-300'}`}>
+            {plant.source === 'custom'
+              ? 'Showing data from your uploaded datasets'
+              : 'Showing demo data (La Haute Borne). Upload custom CSVs to see your own data here.'}
+          </span>
+        </div>
+        <button onClick={fetchData} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors" title="Refresh data">
+          <RefreshCw className="w-3.5 h-3.5" />
+          Refresh
+        </button>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

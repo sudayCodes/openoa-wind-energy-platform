@@ -73,6 +73,7 @@ def plant_summary():
         avg_wind_speed=avg_ws,
         avg_power_kw=avg_power,
         capacity_factor=cap_factor,
+        source=source,
     )
 
 
@@ -114,4 +115,5 @@ def scada_preview():
         sample_rows=sample_rows,
         column_stats=col_stats,
         total_rows=len(scada),
+        source=get_store_source(),
     )
