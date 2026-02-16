@@ -81,6 +81,9 @@ This repository contains a production-grade, full-stack web platform for operati
 - Demo and user-uploaded datasets are managed in-memory (no persistent DB)
 - All analyses are performed on a fresh, validated PlantData object
 
+**Temporary Data Storage:**
+Uploaded CSV files are saved to a temporary directory on the backend server (`backend/tmp/default/`). This allows user-uploaded data to persist across most server restarts and redeployments, as long as the temporary directory is not deleted. This is a simple file-based storage system (Option B), suitable for demo and short-term use. For production-grade persistence, a database or cloud storage is recommended.
+
 **Key Features:**
 - Plant dashboard with turbine map, capacity, and data summary
 - Data upload (SCADA, meter, reanalysis, curtailment, asset)

@@ -11,6 +11,7 @@ const DATASET_CONFIG = [
     description: 'Turbine-level time series: power, wind speed, direction, pitch, temperature, status.',
     color: 'blue',
     requiredBy: ['MonteCarloAEP', 'ElectricalLosses', 'TurbineLongTermGrossEnergy', 'WakeLosses', 'StaticYawMisalignment'],
+    columnNames: ['time', 'asset_id', 'WMET_HorWdSpd', 'WTUR_W', 'pitch', 'temperature', 'status'],
   },
   {
     type: 'meter',
@@ -18,6 +19,7 @@ const DATASET_CONFIG = [
     description: 'Plant-level energy production from the revenue meter.',
     color: 'green',
     requiredBy: ['MonteCarloAEP', 'ElectricalLosses'],
+    columnNames: ['time', 'energy'],
   },
   {
     type: 'reanalysis',
@@ -25,6 +27,7 @@ const DATASET_CONFIG = [
     description: 'Gridded weather data (ERA5/MERRA2) — wind speed, direction, temperature, density.',
     color: 'purple',
     requiredBy: ['MonteCarloAEP', 'TurbineLongTermGrossEnergy', 'WakeLosses'],
+    columnNames: ['time', 'wind_speed', 'wind_direction', 'temperature', 'density', 'pressure'],
   },
   {
     type: 'curtailment',
@@ -32,6 +35,7 @@ const DATASET_CONFIG = [
     description: 'Plant-level availability and curtailment losses (optional for AEP).',
     color: 'yellow',
     requiredBy: ['MonteCarloAEP (optional)'],
+    columnNames: ['time', 'availability', 'curtailment'],
   },
   {
     type: 'asset',
@@ -39,6 +43,7 @@ const DATASET_CONFIG = [
     description: 'Turbine metadata: location (lat/lon), rated power, hub height, rotor diameter.',
     color: 'cyan',
     requiredBy: ['WakeLosses'],
+    columnNames: ['asset_id', 'latitude', 'longitude', 'rated_power', 'hub_height', 'rotor_diameter'],
   },
 ]
 
