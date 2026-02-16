@@ -42,7 +42,7 @@ export default function DataExplorer() {
           <Info className={`w-4 h-4 ${data.source === 'custom' ? 'text-amber-400' : 'text-blue-400'}`} />
           <span className={`text-xs font-medium ${data.source === 'custom' ? 'text-amber-300' : 'text-blue-300'}`}>
             {data.source === 'custom'
-              ? 'Exploring your uploaded SCADA data'
+              ? (data.total_rows > 0 ? 'Exploring your uploaded SCADA data' : 'No SCADA data uploaded yet. Upload a SCADA CSV to explore it here.')
               : 'Exploring demo SCADA data (La Haute Borne). Upload your own CSVs to see custom data here.'}
           </span>
         </div>
@@ -52,6 +52,16 @@ export default function DataExplorer() {
         </button>
       </div>
 
+      {data.total_rows === 0 && data.source === 'custom' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-10 text-center">
+          <Database className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-slate-400 mb-1">No SCADA Data Uploaded</h3>
+          <p className="text-sm text-slate-500">Go to <a href="/upload" className="text-blue-400 underline hover:text-blue-300">Upload Data</a> and upload a SCADA CSV to explore it here.</p>
+        </div>
+      )}
+
+      {data.total_rows > 0 && (
+      <>
       {/* Column Stats */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
         <h3 className="text-lg font-semibold text-white mb-4">Column Statistics</h3>
@@ -115,6 +125,8 @@ export default function DataExplorer() {
           </table>
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

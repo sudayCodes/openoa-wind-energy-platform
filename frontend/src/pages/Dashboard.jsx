@@ -32,7 +32,10 @@ export default function Dashboard() {
       <PageHeader
         icon={LayoutDashboard}
         title="Plant Dashboard"
-        description={`${plant.name} — ${plant.capacity_mw} MW wind farm with ${plant.num_turbines} turbines`}
+        description={plant.num_turbines > 0
+          ? `${plant.name} — ${plant.capacity_mw} MW wind farm with ${plant.num_turbines} turbines`
+          : `${plant.name} — Upload data to see plant details`
+        }
       />
 
       {/* Data Source Indicator */}
@@ -102,6 +105,7 @@ export default function Dashboard() {
             <Wind className="w-5 h-5 text-blue-400" />
             Turbines
           </h3>
+          {plant.turbines && plant.turbines.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -116,14 +120,20 @@ export default function Dashboard() {
                 {plant.turbines.map(t => (
                   <tr key={t.asset_id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                     <td className="py-2 px-3 font-medium text-white">{t.asset_id}</td>
-                    <td className="py-2 px-3 text-right text-slate-300">{t.rated_power}</td>
-                    <td className="py-2 px-3 text-right text-slate-300">{t.hub_height}</td>
-                    <td className="py-2 px-3 text-right text-slate-300">{t.rotor_diameter}</td>
+                    <td className="py-2 px-3 text-right text-slate-300">{t.rated_power ?? '—'}</td>
+                    <td className="py-2 px-3 text-right text-slate-300">{t.hub_height ?? '—'}</td>
+                    <td className="py-2 px-3 text-right text-slate-300">{t.rotor_diameter ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          ) : (
+            <div className="text-center py-8">
+              <Wind className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+              <p className="text-sm text-slate-500">No turbine data available. Upload an asset CSV.</p>
+            </div>
+          )}
         </div>
 
         {/* Plant Info */}
@@ -133,20 +143,22 @@ export default function Dashboard() {
             Data Summary
           </h3>
           <div className="space-y-3">
-            <InfoRow icon={MapPin} label="Location" value={`${plant.latitude}°N, ${plant.longitude}°E`} />
-            <InfoRow icon={Calendar} label="Data Period" value={`${plant.scada_date_range[0].slice(0,10)} to ${plant.scada_date_range[1].slice(0,10)}`} />
-            <InfoRow icon={Database} label="SCADA Records" value={plant.scada_rows.toLocaleString()} />
-            <InfoRow icon={Database} label="Meter Records" value={plant.meter_rows.toLocaleString()} />
-            <InfoRow icon={Wind} label="Reanalysis" value={plant.reanalysis_products.join(', ').toUpperCase()} />
+            <InfoRow icon={MapPin} label="Location" value={plant.latitude && plant.longitude ? `${plant.latitude}°N, ${plant.longitude}°E` : '—'} />
+            <InfoRow icon={Calendar} label="Data Period" value={plant.scada_date_range && plant.scada_date_range[0] !== 'N/A' ? `${plant.scada_date_range[0].slice(0,10)} to ${plant.scada_date_range[1].slice(0,10)}` : '—'} />
+            <InfoRow icon={Database} label="SCADA Records" value={plant.scada_rows ? plant.scada_rows.toLocaleString() : '0'} />
+            <InfoRow icon={Database} label="Meter Records" value={plant.meter_rows ? plant.meter_rows.toLocaleString() : '0'} />
+            <InfoRow icon={Wind} label="Reanalysis" value={plant.reanalysis_products && plant.reanalysis_products.length > 0 ? plant.reanalysis_products.join(', ').toUpperCase() : '—'} />
           </div>
 
-          {/* Mini map placeholder */}
+          {/* Mini map / turbine positions */}
+          {plant.turbines && plant.turbines.length > 0 && plant.turbines[0].latitude != null && (
           <div className="mt-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
             <h4 className="text-sm text-slate-400 mb-2">Turbine Positions</h4>
             <div className="relative w-full h-40">
               {plant.turbines.map((t, i) => {
-                const lats = plant.turbines.map(x => x.latitude)
-                const lngs = plant.turbines.map(x => x.longitude)
+                const lats = plant.turbines.filter(x => x.latitude != null).map(x => x.latitude)
+                const lngs = plant.turbines.filter(x => x.longitude != null).map(x => x.longitude)
+                if (lats.length === 0 || t.latitude == null || t.longitude == null) return null
                 const minLat = Math.min(...lats), maxLat = Math.max(...lats)
                 const minLng = Math.min(...lngs), maxLng = Math.max(...lngs)
                 const pad = 0.15
@@ -171,6 +183,7 @@ export default function Dashboard() {
               })}
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

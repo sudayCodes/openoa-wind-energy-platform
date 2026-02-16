@@ -229,6 +229,11 @@ def get_plant() -> Optional[PlantData]:
     return _demo_plant
 
 
+def get_raw_uploads() -> dict[str, Any]:
+    """Return the raw user-uploaded DataFrames (for Dashboard/Explorer in custom mode)."""
+    return _raw_uploads
+
+
 def init_plant():
     """Alias for init_demo."""
     init_demo()

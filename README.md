@@ -12,7 +12,7 @@ A full-stack web application wrapping NREL's [OpenOA](https://github.com/NREL/Op
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -28,7 +28,7 @@ A full-stack web application wrapping NREL's [OpenOA](https://github.com/NREL/Op
 - **Backend**: FastAPI + OpenOA v3.2 + Matplotlib
 - **Deployment**: Docker + Nginx reverse proxy (single container via supervisord)
 
-## ✨ Features
+##  Features
 
 | Feature | Description |
 |---------|-------------|
@@ -45,7 +45,7 @@ A full-stack web application wrapping NREL's [OpenOA](https://github.com/NREL/Op
 | **Result Persistence** | Results stay when switching tabs (localStorage) |
 | **Timeout Recovery** | Polls backend if frontend times out on long analyses |
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
@@ -83,7 +83,7 @@ npm run dev
 
 Frontend dev server at http://localhost:5173 proxies `/api` to the backend.
 
-## 📊 Demo Dataset
+##  Demo Dataset
 
 **La Haute Borne Wind Farm** (ENGIE open data):
 - 4 × Senvion MM82 turbines (2.05 MW each = 8.2 MW total)
@@ -111,7 +111,7 @@ Frontend dev server at http://localhost:5173 proxies `/api` to the backend.
 | GET | `/api/analysis/last-result` | Fetch cached last result |
 | GET | `/api/docs` | Interactive Swagger API docs |
 
-## 🧠 Design Decisions
+##  Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
@@ -135,7 +135,7 @@ Frontend dev server at http://localhost:5173 proxies `/api` to the backend.
 | **Memory ceiling** | ~1 GB on Railway; large analyses with many simulations may OOM |
 | **Plot generation** | Matplotlib figures converted to base64 PNG — stripped from downloads |
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 openoa-app/
@@ -181,7 +181,7 @@ openoa-app/
     └── vite.config.js
 ```
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -191,6 +191,6 @@ openoa-app/
 | Infrastructure | Docker, Nginx 1.27, supervisord |
 | Deployment | Railway (single container) |
 
-## 📄 License
+##  License
 
 This project uses [OpenOA](https://github.com/NREL/OpenOA) (BSD-3-Clause License) by NREL.
