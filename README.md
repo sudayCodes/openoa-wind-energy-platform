@@ -33,7 +33,6 @@ A full-stack web application wrapping NREL's [OpenOA](https://github.com/NREL/Op
 | Feature | Description |
 |---------|-------------|
 | **Dashboard** | Plant overview with turbine map, capacity, and data summary |
-| **Data Upload** | Upload custom CSVs or use built-in La Haute Borne demo data |
 | **Data Explorer** | Interactive SCADA data table with column statistics |
 | **AEP Analysis** | Monte Carlo AEP with P50/P90, capacity factor & executive summary |
 | **Electrical Losses** | Electrical loss quantification via monthly resampling |
@@ -44,9 +43,6 @@ A full-stack web application wrapping NREL's [OpenOA](https://github.com/NREL/Op
 | **Download** | Export results as JSON or CSV |
 | **Result Persistence** | Results stay when switching tabs (localStorage) |
 | **Timeout Recovery** | Polls backend if frontend times out on long analyses |
-
-##  Quick Start
-
 ### Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 
@@ -64,71 +60,98 @@ docker compose up -d
 open http://localhost
 ```
 
-The app starts on **http://localhost** (port 80). The backend loads the La Haute Borne demo dataset (~4 turbines, 8.2 MW) on startup — this takes ~20s.
+# OpenOA Wind Energy Analytics Platform
 
-### Development Mode (without Docker)
+This repository contains a production-grade, full-stack web platform for operational analysis of wind energy plants, built on top of NREL's [OpenOA](https://github.com/NREL/OpenOA) library. The application provides a robust, extensible, and user-friendly interface for plant data upload, exploration, and advanced analytics, with a focus on reliability, transparency, and reproducibility.
 
-```bash
+**Live Demo:** https://openoa-wind-platform-production.up.railway.app
+**API Documentation:** https://openoa-wind-platform-production.up.railway.app/api/docs
+
+---
+
+## System Architecture
+
+**Frontend:** React 19, Vite, Tailwind CSS 4, Recharts 3
+
+**Backend:** FastAPI (Python 3.11), OpenOA 3.2, Matplotlib, Pandas, Numpy
+
+**Deployment:** Docker (single container), Nginx reverse proxy, supervisord
+
+**Data Model:**
+- Demo and user-uploaded datasets are managed in-memory (no persistent DB)
+- All analyses are performed on a fresh, validated PlantData object
+
+**Key Features:**
+- Plant dashboard with turbine map, capacity, and data summary
+- Data upload (SCADA, meter, reanalysis, curtailment, asset)
+- Data explorer with column statistics and sample rows
+- Monte Carlo AEP, electrical losses, turbine energy, wake losses, gap, and yaw misalignment analyses
+- Downloadable results (JSON/CSV)
+- Result persistence (localStorage)
+- Robust timeout and concurrency handling
+
+---
+
+## Codebase Structure and Implementation
+
+### Backend Modules
+
+#### `backend/main.py`
+
+#### `backend/api/routes/plant.py`
+
+#### `backend/api/routes/analysis.py`
 # Backend
 cd backend
 pip install -r requirements.txt
 pip install -e ../../OpenOA  # Install OpenOA locally
 uvicorn main:app --reload --port 8000
 
-# Frontend (separate terminal)
 cd frontend
 npm install
 npm run dev
 ```
 
-Frontend dev server at http://localhost:5173 proxies `/api` to the backend.
 
-##  Demo Dataset
+#### `backend/api/routes/upload.py`
 
-**La Haute Borne Wind Farm** (ENGIE open data):
-- 4 × Senvion MM82 turbines (2.05 MW each = 8.2 MW total)
-- Location: 48.45°N, 5.59°E (France)
-- ~417,000 SCADA records at 10-minute resolution
+#### `backend/api/schemas.py`
 - ERA5 + MERRA2 reanalysis data included
 
-## 🔌 API Endpoints
 
-| Method | Endpoint | Description |
+#### `backend/core/plant_manager.py`
 |--------|----------|-------------|
-| GET | `/api/health` | Health check + plant load status |
-| GET | `/api/plant/summary` | Plant metadata, turbines, date range |
-| GET | `/api/plant/scada-preview` | Sample SCADA rows + column stats |
-| POST | `/api/data/upload/{type}` | Upload custom CSV data |
-| GET | `/api/data/status` | Current data source & analysis readiness |
-| POST | `/api/data/reset` | Reset to demo data |
-| POST | `/api/analysis/aep` | Run Monte Carlo AEP analysis |
-| POST | `/api/analysis/electrical-losses` | Run electrical losses analysis |
+
+#### `backend/core/config.py`
+
+#### `backend/services/data_loader.py`
+
+#### `backend/services/analysis_runner.py`
 | POST | `/api/analysis/turbine-energy` | Run turbine ideal energy analysis |
-| POST | `/api/analysis/wake-losses` | Run wake losses analysis |
-| POST | `/api/analysis/gap-analysis` | Run EYA gap analysis |
-| POST | `/api/analysis/yaw-misalignment` | Run yaw misalignment analysis |
-| GET | `/api/analysis/status` | Check if analysis is running |
+
+#### `backend/services/validators.py`
 | GET | `/api/analysis/last-result` | Fetch cached last result |
-| GET | `/api/docs` | Interactive Swagger API docs |
 
-##  Design Decisions
+---
 
-| Decision | Rationale |
-|----------|-----------|
-| **Single container** (supervisord) | Railway free tier has 1 service; supervisord runs nginx + uvicorn together |
-| **1 uvicorn worker** | OpenOA analyses are memory-intensive (~500 MB each); 1 worker prevents OOM |
-| **asyncio.Lock concurrency guard** | Only one analysis at a time — returns HTTP 429 if busy |
-| **Backend result caching** | If frontend times out (15 min), it polls `/api/analysis/status` and fetches cached result |
-| **localStorage persistence** | Analysis results survive tab switches without re-running |
-| **Non-blocking CSV parsing** | `run_in_executor` prevents event loop blocking during large file uploads |
-| **Forced dark theme** | CSS `color-scheme: dark` ensures consistent dark UI regardless of browser settings |
-| **Monte Carlo defaults** | `num_sim=1000` for AEP, `num_sim=5` for TIE — balances accuracy vs. memory |
+### Frontend Modules
 
-## ⚡ Performance & Trade-offs
+#### `frontend/src/App.jsx`
 
+#### `frontend/src/api/client.js`
+
+#### `frontend/src/hooks/useAnalysisRunner.js`
+
+#### `frontend/src/hooks/usePersistedResult.js`
+
+#### `frontend/src/hooks/useDataStatus.js`
+
+#### `frontend/src/components/Layout.jsx`
+
+#### `frontend/src/components/UI.jsx`
 | Aspect | Detail |
-|--------|--------|
-| **AEP (linear, monthly)** | ~30–60s, reliable |
+
+#### `frontend/src/pages/*`
 | **AEP (GBM, daily + temp)** | 5–12 min, may hit timeout → recovered via polling |
 | **Max upload size** | 100 MB (nginx `client_max_body_size`) |
 | **Frontend timeout** | 15 min (axios); backend keeps running if exceeded |
@@ -138,11 +161,105 @@ Frontend dev server at http://localhost:5173 proxies `/api` to the backend.
 ##  Project Structure
 
 ```
-openoa-app/
-├── Dockerfile                  # Single-container build
-├── docker-compose.yml          # Local development
-├── supervisord.conf            # Manages nginx + uvicorn
-├── nginx/nginx.conf            # Reverse proxy config
+
+#### `frontend/src/index.css`
+
+#### `frontend/vite.config.js`
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check and dataset readiness |
+| GET | `/api/plant/summary` | Plant metadata, turbines, date range, stats |
+| GET | `/api/plant/scada-preview` | SCADA sample rows and column stats |
+| POST | `/api/data/upload/{type}` | Upload CSV for a dataset |
+| GET | `/api/data/status` | Loaded dataset status and analysis readiness |
+| POST | `/api/data/reset` | Reset all data to demo |
+| GET | `/api/data/templates` | Required columns for each dataset |
+| POST | `/api/analysis/aep` | Monte Carlo AEP analysis |
+| POST | `/api/analysis/electrical-losses` | Electrical losses analysis |
+| POST | `/api/analysis/turbine-energy` | Turbine gross energy analysis |
+| POST | `/api/analysis/wake-losses` | Wake loss analysis |
+| POST | `/api/analysis/gap-analysis` | EYA gap analysis |
+| POST | `/api/analysis/yaw-misalignment` | Yaw misalignment analysis |
+| GET | `/api/analysis/status` | Analysis lock status and result availability |
+| GET | `/api/analysis/last-result` | Cached result from last analysis |
+| GET | `/api/docs` | Interactive API documentation (Swagger) |
+
+---
+
+## Data Flow and Analysis Pipeline
+
+1. **Data Upload:**
+     - User uploads CSVs for SCADA, meter, reanalysis, curtailment, and/or asset
+     - Each file is validated for required columns and time format
+     - Data is stored in-memory and replaces any previous upload
+
+2. **Plant Summary and Data Explorer:**
+     - Dashboard and Data Explorer read directly from user-uploaded data (never fallback to demo in custom mode)
+     - All statistics and tables are computed on the fly
+
+3. **Analysis Execution:**
+     - User triggers an analysis (AEP, losses, etc.)
+     - Backend validates required datasets, builds a fresh PlantData object
+     - Analysis runs in a background thread; only one analysis at a time
+     - Results (including plots) are returned as structured JSON
+     - If frontend times out, it polls for completion and fetches cached result
+
+4. **Result Persistence and Download:**
+     - Results are cached in localStorage with metadata
+     - Download as JSON or CSV (plots omitted from downloads)
+
+---
+
+## Demo Dataset
+
+**La Haute Borne Wind Farm (ENGIE Open Data):**
+- 4 × Senvion MM82 turbines (2.05 MW each, 8.2 MW total)
+- Location: 48.45°N, 5.59°E (France)
+- ~417,000 SCADA records (10-min resolution)
+- ERA5 and MERRA2 reanalysis data included
+
+---
+
+## Development and Deployment
+
+### Prerequisites
+- Docker Desktop (recommended for production parity)
+- Node.js 18+, Python 3.11+ (for local dev)
+
+### Quick Start (Docker Compose)
+
+```bash
+git clone <repo-url>
+cd openoa-app
+docker compose up -d
+open http://localhost
+```
+
+### Local Development
+
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+pip install -e ../../OpenOA
+uvicorn main:app --reload --port 8000
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## License
+
+This project uses [OpenOA](https://github.com/NREL/OpenOA) (BSD-3-Clause License) by NREL.
 ├── backend/
 │   ├── main.py                 # FastAPI app + Swagger at /api/docs
 │   ├── requirements.txt
