@@ -260,42 +260,46 @@ npm run dev
 ## License
 
 This project uses [OpenOA](https://github.com/NREL/OpenOA) (BSD-3-Clause License) by NREL.
-├── backend/
-│   ├── main.py                 # FastAPI app + Swagger at /api/docs
-│   ├── requirements.txt
-│   ├── api/routes/
-│   │   ├── plant.py            # Plant summary + data preview
-│   │   ├── analysis.py         # 6 analysis endpoints + concurrency guard
-│   │   └── upload.py           # CSV upload, status, reset
-│   ├── core/
-│   │   ├── config.py           # Paths & defaults
-│   │   └── plant_manager.py    # PlantData lifecycle
-│   └── services/
-│       ├── data_loader.py      # Demo data ETL pipeline
-│       └── analysis_runner.py  # OpenOA analysis wrappers
-└── frontend/
-    ├── src/
-    │   ├── App.jsx             # Router (9 pages)
-    │   ├── index.css           # Forced dark theme + animations
-    │   ├── api/client.js       # Axios API client
-    │   ├── hooks/
-    │   │   ├── useAnalysisRunner.js  # Timeout recovery + polling
-    │   │   ├── usePersistedResult.js # localStorage + download utils
-    │   │   └── useDataStatus.js      # Analysis readiness check
-    │   ├── components/
-    │   │   ├── Layout.jsx      # Sidebar + header shell
-    │   │   └── UI.jsx          # StatCard, PlotImage, DownloadButton, etc.
-    │   └── pages/
-    │       ├── Dashboard.jsx
-    │       ├── DataUpload.jsx
-    │       ├── DataExplorer.jsx
-    │       ├── AEPAnalysis.jsx       # Executive summary + P50/P90
-    │       ├── ElectricalLosses.jsx
-    │       ├── TurbineEnergy.jsx
-    │       ├── WakeLosses.jsx
-    │       ├── GapAnalysis.jsx
-    │       └── YawMisalignment.jsx
-    └── vite.config.js
+## Project Directory Structure
+
+backend/
+     main.py                 # FastAPI app + Swagger at /api/docs
+     requirements.txt
+     api/
+          routes/
+               plant.py            # Plant summary + data preview
+               analysis.py         # 6 analysis endpoints + concurrency guard
+               upload.py           # CSV upload, status, reset
+     core/
+          config.py           # Paths & defaults
+          plant_manager.py    # PlantData lifecycle
+     services/
+          data_loader.py      # Demo data ETL pipeline
+          analysis_runner.py  # OpenOA analysis wrappers
+frontend/
+     src/
+          App.jsx             # Router (9 pages)
+          index.css           # Forced dark theme + animations
+          api/
+               client.js       # Axios API client
+          hooks/
+               useAnalysisRunner.js  # Timeout recovery + polling
+               usePersistedResult.js # localStorage + download utils
+               useDataStatus.js      # Analysis readiness check
+          components/
+               Layout.jsx      # Sidebar + header shell
+               UI.jsx          # StatCard, PlotImage, DownloadButton, etc.
+          pages/
+               Dashboard.jsx
+               DataUpload.jsx
+               DataExplorer.jsx
+               AEPAnalysis.jsx       # Executive summary + P50/P90
+               ElectricalLosses.jsx
+               TurbineEnergy.jsx
+               WakeLosses.jsx
+               GapAnalysis.jsx
+               YawMisalignment.jsx
+     vite.config.js
 ```
 
 ##  Tech Stack
