@@ -3,16 +3,41 @@ import { useState } from 'react'
 
 // Glossary of column names and their full forms/descriptions
 const COLUMN_GLOSSARY = {
-  'WMET_HorWdSpd': 'Wind Meteorological Horizontal Wind Speed',
-  'WTUR_W': 'Wind Turbine Power Output (Watts)',
-  'asset_id': 'Unique Turbine Identifier',
-  'latitude': 'Turbine Latitude (decimal degrees)',
-  'longitude': 'Turbine Longitude (decimal degrees)',
-  'rated_power': 'Turbine Rated Power (kW)',
-  'hub_height': 'Turbine Hub Height (meters)',
-  'rotor_diameter': 'Turbine Rotor Diameter (meters)',
+  // SCADA Columns
   'time': 'Timestamp (date/time)',
-  // Add more as needed
+  'asset_id': 'Turbine or Tower Identifier',
+  'WTUR_W': 'Wind TURbine Power (kW)',
+  'WMET_HorWdSpd': 'Wind METeorological Horizontal Wind Speed (m/s)',
+  'WMET_HorWdDir': 'Wind METeorological Horizontal Wind Direction (deg)',
+  'WMET_HorWdDirRel': 'Wind Direction Relative to Nacelle (deg)',
+  'WTUR_TurSt': 'Wind TURbine Status',
+  'WROT_BlPthAngVal': 'Wind ROTor Blade Pitch Angle Value (deg)',
+  'WMET_EnvTmp': 'Wind METeorological Environmental Temperature',
+
+  // Meter Columns
+  'MMTR_SupWh': 'Main MeTeR Supplied Watt-hours (kWh)',
+
+  // Reanalysis Columns
+  'WMETR_HorWdSpd': 'Reanalysis Horizontal Wind Speed',
+  'WMETR_HorWdSpdU': 'Reanalysis U-component Wind Speed',
+  'WMETR_HorWdSpdV': 'Reanalysis V-component Wind Speed',
+  'WMETR_HorWdDir': 'Reanalysis Wind Direction',
+  'WMETR_EnvTmp': 'Reanalysis Environmental Temperature',
+  'WMETR_AirDen': 'Reanalysis Air Density',
+  'WMETR_EnvPres': 'Reanalysis Environmental Pressure',
+
+  // Curtailment Columns
+  'IAVL_ExtPwrDnWh': 'Internal AVaiLability External Power Down Watt-hours',
+  'IAVL_DnWh': 'Internal AVaiLability Down Watt-hours',
+
+  // Asset Columns
+  'latitude': 'Geographic Latitude',
+  'longitude': 'Geographic Longitude',
+  'rated_power': 'Rated Turbine Power (kW)',
+  'hub_height': 'Turbine Hub Height (m)',
+  'rotor_diameter': 'Rotor Diameter (m)',
+  'elevation': 'Elevation Above Sea Level (m)',
+  'type': 'Asset Type (turbine/tower)',
 }
 
 export default function ColumnGlossary() {
